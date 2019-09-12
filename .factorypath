@@ -1,0 +1,9 @@
+<factorypath>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/ryanharter/auto/value/auto-value-moshi/0.4.7/auto-value-moshi-0.4.7.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/google/auto/value/auto-value/1.6.5/auto-value-1.6.5.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/google/auto/value/auto-value-annotations/1.6.5/auto-value-annotations-1.6.5.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/ryanharter/auto/value/auto-value-moshi-annotations/0.4.7/auto-value-moshi-annotations-0.4.7.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/squareup/javapoet/1.11.0/javapoet-1.11.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/squareup/moshi/moshi/1.7.0/moshi-1.7.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/com/squareup/okio/okio/1.15.0/okio-1.15.0.jar" enabled="true" runInBatchMode="false"/>
+</factorypath>
