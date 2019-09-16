@@ -87,7 +87,7 @@ public abstract class NotarizationInfo {
 			PListDict plistOutput = PListDict.fromXML(result.stdoutAsStream());
 
 			if (result.exitValue() == 0) {
-				Map<String, Object> notarizationInfoList = (Map<String, Object>) plistOutput.get("notarization-info");
+				Map<?, ?> notarizationInfoList = (Map<?, ?>) plistOutput.get("notarization-info");
 				if (notarizationInfoList != null && !notarizationInfoList.isEmpty()) {
 					parseNotarizationInfo(plistOutput, notarizationInfoList, resultBuilder);
 				} else {
@@ -96,9 +96,7 @@ public abstract class NotarizationInfo {
 					.message("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
 				}
 			} else {
-				resultBuilder
-					.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-					.message("Failed to notarize the requested file. Reason: " + (String) ((List<Map<String, Object>>) plistOutput.get("product-errors")).get(0).get("message"));
+				parseProductError(plistOutput, resultBuilder, "Failed to notarize the requested file");
 			}
 		} catch (IOException | SAXException e) {
 			LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID() + "'", e);
@@ -106,7 +104,7 @@ public abstract class NotarizationInfo {
 		} 
 	}
 
-	private void parseNotarizationInfo(PListDict plist, Map<String, Object> notarizationInfo, NotarizationInfoResult.Builder resultBuilder) {
+	private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo, NotarizationInfoResult.Builder resultBuilder) {
 		String statusStr = (String) notarizationInfo.get("Status");
 		if ("success".equalsIgnoreCase(statusStr)) {
 			resultBuilder
@@ -123,8 +121,8 @@ public abstract class NotarizationInfo {
 				.status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
 				.message("Notarization in progress");
 		} else {
-			resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-			.message("Failed to notarize the requested file (Status="+statusStr+"). Reason: " + (String) ((List<Map<String, Object>>) plist.get("product-errors")).get(0).get("message"));
+			parseProductError(plist, resultBuilder, "Failed to notarize the requested file (Status="+statusStr+")");
+
 			String logFileUrl = (String)notarizationInfo.get("LogFileURL");
 			if (logFileUrl != null) {
 				resultBuilder.notarizationLog(logFromServer(logFileUrl));
@@ -132,6 +130,33 @@ public abstract class NotarizationInfo {
 				LOGGER.warn("Unable to find LogFileURL in parsed plist file");
 			}
 		}
+	}
+
+	private NotarizationInfoResult.Builder parseProductError(PListDict plist, NotarizationInfoResult.Builder resultBuilder, String failureMessage) {
+		Object rawProductErrors = plist.get("product-errors");
+
+		if (rawProductErrors instanceof List) {
+			List<?> productErrors = (List<?>) rawProductErrors;
+			if (!productErrors.isEmpty()) {
+				Object rawFirstError = productErrors.get(0);
+				if (rawFirstError instanceof Map<?, ?>) {
+					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
+					if (firstError != null) {
+						resultBuilder.message(failureMessage + ". Reason: " + firstError.get("message"));
+					} else {
+						resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R3]");
+					}
+				} else {
+					resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R2]");
+				}
+			} else {
+				resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R2]");
+			}
+		} else {
+			resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R0]");
+		}
+
+		return resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED);
 	}
 
 	private String logFromServer(String logFileUrl) {

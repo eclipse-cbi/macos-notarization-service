@@ -88,7 +88,11 @@ public abstract class Notarizer {
 				resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
 					.message((String) plistOutput.get("success-message"))
-					.appleRequestUUID((String) ((Map<String,Object>) plistOutput.get("notarization-upload")).get("RequestUUID")); 
+					.appleRequestUUID((String) ((Map<String,Object>) plistOutput.get("notarization-upload")).get("RequestUUID"));
+			} else if (nativeProcessResult.exitValue() == 176) { // 176 seems to mean: already uploaded
+				resultBuilder
+				.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+				.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)");
 			} else {
 				resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_FAILED)
