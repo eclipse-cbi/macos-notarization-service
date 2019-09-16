@@ -99,6 +99,8 @@ public abstract class NotarizationRequest {
 			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
 			if (throwable != null) {
 				statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
+			} else if (status().get().status() == State.ERROR) {
+				throw new RuntimeException(status().get().toString());
 			} else {
 				switch (result.status()) {
 					case UPLOAD_FAILED:
@@ -121,6 +123,8 @@ public abstract class NotarizationRequest {
 			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
 			if (throwable != null) {
 				statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
+			} else if (status().get().status() == State.ERROR) {
+				throw new RuntimeException(status().get().toString());
 			} else {
 				switch (result.status()) {
 					case NOTARIZATION_FAILED:
@@ -151,6 +155,8 @@ public abstract class NotarizationRequest {
 			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
 			if (throwable != null) {
 				statusBuilder.status(State.ERROR).message("Error happened while stapling notarization ticket to uploaded file").moreInfo(throwable.getMessage());
+			} else if (status().get().status() == State.ERROR) {
+				throw new RuntimeException(status().get().toString());
 			} else {
 				switch (result.status()) {
 					case SUCCESS:
