@@ -191,7 +191,7 @@ public class NotarizationService {
 					.staplingTimeout(staplingTimeout)
 					.build().stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay));
 		}       
-		        
+
 		NotarizationRequest request = requestBuilder.build(executor);
 		
 		UUID uuid = cache.put(request);

@@ -142,21 +142,18 @@ public abstract class NotarizationInfo {
 				if (rawFirstError instanceof Map<?, ?>) {
 					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
 					if (firstError != null) {
-						resultBuilder.message(failureMessage + ". Reason: " + firstError.get("message"));
-					} else {
-						resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R3]");
-					}
-				} else {
-					resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R2]");
+						return resultBuilder
+								.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
+								.message(failureMessage + ". Reason: " + firstError.get("message"));
+					} 
 				}
-			} else {
-				resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R2]");
 			}
-		} else {
-			resultBuilder.message(failureMessage + ". Reason: unable to parse the reason message [R0]");
 		}
 
-		return resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED);
+		LOGGER.warn("PList=" + plist);
+		return resultBuilder
+				.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
+				.message(failureMessage + ". Reason: unable to parse the reason message");
 	}
 
 	private String logFromServer(String logFileUrl) {

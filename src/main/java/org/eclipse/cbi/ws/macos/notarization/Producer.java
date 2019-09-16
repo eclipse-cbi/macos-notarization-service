@@ -10,6 +10,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 
 import org.eclipse.cbi.ws.macos.notarization.request.JsonAdapterFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.squareup.moshi.JsonAdapter;
@@ -22,10 +24,16 @@ import okhttp3.OkHttpClient;
 @ApplicationScoped
 public class Producer {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger("macos-notarization-service-threadpool-handler");
+
 	@Produces
 	ScheduledExecutorService produceExecutor() {
 		return Executors.newScheduledThreadPool(32,
-				new ThreadFactoryBuilder().setNameFormat("macos-notarization-service-pool-thread-%d").build());
+			new ThreadFactoryBuilder()
+				.setNameFormat("macos-notarization-service-pool-thread-%d")
+				.setUncaughtExceptionHandler((t, e) -> {
+					LOGGER.error("Uncaught "+e.getClass().getName()+" in thread " + t.getName(), e);
+				}).build());
 	}
 
 	@Produces

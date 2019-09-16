@@ -96,83 +96,83 @@ public abstract class NotarizationRequest {
 		}
 
 		private void updateStatus(NotarizerResult result, Throwable throwable) {
-			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
-			if (throwable != null) {
-				statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
-			} else if (status().get().status() == State.ERROR) {
-				throw new RuntimeException(status().get().toString());
-			} else {
-				switch (result.status()) {
-					case UPLOAD_FAILED:
-						statusBuilder.status(State.ERROR)
-						.message("Issue happened while uploading file to Apple notarization service");
-						break;
-					case UPLOAD_SUCCESSFUL:
-						statusBuilder.status(State.IN_PROGRESS)
-						.message("File has been successfully uploaded to Apple notarization service");
-						break;
-					default:
-						throw new IllegalStateException("Unknown status " + result.status());
+			if (status().get().status() != State.ERROR) { 
+				NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
+				if (throwable != null) {
+					statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
+				} else {
+					switch (result.status()) {
+						case UPLOAD_FAILED:
+							statusBuilder.status(State.ERROR)
+							.message("Issue happened while uploading file to Apple notarization service");
+							break;
+						case UPLOAD_SUCCESSFUL:
+							statusBuilder.status(State.IN_PROGRESS)
+							.message("File has been successfully uploaded to Apple notarization service");
+							break;
+						default:
+							throw new IllegalStateException("Unknown status " + result.status());
+					}
+					statusBuilder.moreInfo(result.message());
 				}
-				statusBuilder.moreInfo(result.message());
+				Builder.this.status().set(statusBuilder.build());
 			}
-			Builder.this.status().set(statusBuilder.build());
 		}
 		
 		private void updateStatus(NotarizationInfoResult result, Throwable throwable) {
-			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
-			if (throwable != null) {
-				statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
-			} else if (status().get().status() == State.ERROR) {
-				throw new RuntimeException(status().get().toString());
-			} else {
-				switch (result.status()) {
-					case NOTARIZATION_FAILED:
-						statusBuilder.status(State.ERROR)
-						.message("Notarization has failed on Apple notarization service");
-						break;
-					case RETRIEVAL_FAILED:
-						statusBuilder.status(State.ERROR)
-						.message("Apple notarization service fails to report progress");
-						break;
-					case NOTARIZATION_IN_PROGRESS:
-						statusBuilder.status(State.ERROR)
-						.message("Apple notarization service reports notarization in progress for too long");
-						break;
-					case NOTARIZATION_SUCCESSFUL:
-						statusBuilder.status(State.IN_PROGRESS)
-						.message("Notarization has successfully completed on Apple notarization service");
-						break;
-					default:
-						throw new IllegalStateException("Unknown status " + result.status());
+			if (status().get().status() != State.ERROR) {
+				NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
+				if (throwable != null) {
+					statusBuilder.status(State.ERROR).message("Error happened while uploading file to Apple notarization service").moreInfo(throwable.getMessage());
+				} else {
+					switch (result.status()) {
+						case NOTARIZATION_FAILED:
+							statusBuilder.status(State.ERROR)
+							.message("Notarization has failed on Apple notarization service");
+							break;
+						case RETRIEVAL_FAILED:
+							statusBuilder.status(State.ERROR)
+							.message("Apple notarization service fails to report progress");
+							break;
+						case NOTARIZATION_IN_PROGRESS:
+							statusBuilder.status(State.ERROR)
+							.message("Apple notarization service reports notarization in progress for too long");
+							break;
+						case NOTARIZATION_SUCCESSFUL:
+							statusBuilder.status(State.IN_PROGRESS)
+							.message("Notarization has successfully completed on Apple notarization service");
+							break;
+						default:
+							throw new IllegalStateException("Unknown status " + result.status());
+					}
+					statusBuilder.moreInfo(result.message());
 				}
-				statusBuilder.moreInfo(result.message());
+				Builder.this.status().set(statusBuilder.build());
 			}
-			Builder.this.status().set(statusBuilder.build());
 		}
 		
 		private void updateStatus(StaplerResult result, Throwable throwable) {
-			NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
-			if (throwable != null) {
-				statusBuilder.status(State.ERROR).message("Error happened while stapling notarization ticket to uploaded file").moreInfo(throwable.getMessage());
-			} else if (status().get().status() == State.ERROR) {
-				throw new RuntimeException(status().get().toString());
-			} else {
-				switch (result.status()) {
-					case SUCCESS:
-						statusBuilder.status(State.COMPLETE)
-						.message("Notarization ticket has been stapled successfully to uploaded file. You can now download the stapled file");
-						break;
-					case ERROR:
-						statusBuilder.status(State.ERROR)
-						.message("Error happened while stapling notarization ticket to uploaded file. Notarization has been successful though");
-						break;
-					default:
-						throw new IllegalStateException("Unknown status " + result.status());
+			if (status().get().status() != State.ERROR) {
+				NotarizationStatus.Builder statusBuilder = NotarizationStatus.builder();
+				if (throwable != null) {
+					statusBuilder.status(State.ERROR).message("Error happened while stapling notarization ticket to uploaded file").moreInfo(throwable.getMessage());
+				} else {
+					switch (result.status()) {
+						case SUCCESS:
+							statusBuilder.status(State.COMPLETE)
+							.message("Notarization ticket has been stapled successfully to uploaded file. You can now download the stapled file");
+							break;
+						case ERROR:
+							statusBuilder.status(State.ERROR)
+							.message("Error happened while stapling notarization ticket to uploaded file. Notarization has been successful though");
+							break;
+						default:
+							throw new IllegalStateException("Unknown status " + result.status());
+					}
+					statusBuilder.moreInfo(result.message());
 				}
-				statusBuilder.moreInfo(result.message());
+				Builder.this.status().set(statusBuilder.build());
 			}
-			Builder.this.status().set(statusBuilder.build());
 		}
 	}
 }

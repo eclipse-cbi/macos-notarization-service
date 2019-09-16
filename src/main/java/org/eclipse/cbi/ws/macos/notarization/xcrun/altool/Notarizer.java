@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.slf4j.Logger;
@@ -22,6 +24,8 @@ import net.jodah.failsafe.RetryPolicy;
 
 @AutoValue
 public abstract class Notarizer {
+
+	private static final Pattern UPLOADID_PATTERN = Pattern.compile(".*The upload ID is ([A-Za-z0-9\\\\-]*).*");
 
 	private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
 
@@ -66,7 +70,7 @@ public abstract class Notarizer {
 			throw new ExecutionException("IOException happened during notarization upload", e);
 		}
 	}
-	
+
 	public NotarizerResult uploadFailsafe(int maxFailedAttempts, Duration minBackOffDelay, Duration maxBackOffDelay) {
 		RetryPolicy<NotarizerResult> retryOnFailure = new RetryPolicy<NotarizerResult>()
 				.handleResultIf(info -> info.status() == NotarizerResult.Status.UPLOAD_FAILED)
@@ -93,6 +97,7 @@ public abstract class Notarizer {
 				resultBuilder
 				.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
 				.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)");
+				parseAppleRequestIDFromProductErrors(plistOutput, resultBuilder);
 			} else {
 				resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_FAILED)
@@ -104,6 +109,35 @@ public abstract class Notarizer {
 			throw new ExecutionException("Error while parsing the output after the upload of the file to be notarized", e);
 		}
 		return resultBuilder.build();
+	}
+	
+	private void parseAppleRequestIDFromProductErrors(PListDict plist, NotarizerResult.Builder resultBuilder) {
+		Object rawProductErrors = plist.get("product-errors");
+		if (rawProductErrors instanceof List) {
+			List<?> productErrors = (List<?>) rawProductErrors;
+			if (!productErrors.isEmpty()) {
+				Object rawFirstError = productErrors.get(0);
+				if (rawFirstError instanceof Map<?, ?>) {
+					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
+					if (firstError != null) {
+						Object message = firstError.get("message");
+						LOGGER.trace("parseAppleRequestIDFromProductErrors.message<=" + message);
+						if (message instanceof String) {
+							try {
+								Matcher matcher = UPLOADID_PATTERN.matcher((String)message);
+								if (matcher.matches()) {
+									resultBuilder.appleRequestUUID(matcher.group(1));
+								}
+							} catch (IllegalStateException e) {
+								throw new IllegalStateException("Error while parsing Apple request ID from xcrun output", e);
+							}
+							return;
+						}
+					}
+				}
+			}
+		}
+		throw new RuntimeException("Unable to retrieve appleRequestId from error message from " + plist.toString());
 	}
 	
 	@AutoValue.Builder
