@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.ParserConfigurationException;
@@ -127,6 +129,41 @@ class PListDict extends ForwardingMap<String, Object> {
 		PListDict result = pListDictHandler.getResult();
 		LOGGER.trace("Parsed plist=" + result);
 		return result;
+	}
+
+	Optional<String> getFirstMessageFromProductErrors() {
+		Object rawProductErrors = get("product-errors");
+		if (rawProductErrors instanceof List<?>) {
+			List<?> productErrors = (List<?>) rawProductErrors;
+			if (!productErrors.isEmpty()) {
+				Object rawFirstError = productErrors.get(0);
+				if (rawFirstError instanceof Map<?, ?>) {
+					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
+					if (firstError != null) {
+						Object message = firstError.get("message");
+						LOGGER.trace("firstMessageFromProductErrors.message=" + message);
+						if (message instanceof String) {
+							return Optional.of((String) message);
+						}
+					}
+				}
+			}
+		}
+		LOGGER.debug("Unable to retrieve first 'message' from product-errors in " + toString());
+		return Optional.empty();
+	}
+
+	Optional<String> getRequestUUIDFromNotarizationUpload() {
+		Object rawNotariationUpload = get("notarization-upload");
+		if (rawNotariationUpload instanceof Map<?,?>) {
+			Map<?,?> notariationUpload = (Map<?, ?>) rawNotariationUpload;
+			Object requestUUID = notariationUpload.get("RequestUUID");
+			if (requestUUID instanceof String) {
+				return Optional.of((String)requestUUID);
+			}
+		}
+		LOGGER.debug("Unable to retrieve 'RequestUUID' from notarization-upload in " + toString());
+		return Optional.empty();
 	}
 
 	@Override

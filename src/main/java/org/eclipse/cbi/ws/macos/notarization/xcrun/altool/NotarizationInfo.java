@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -84,19 +85,25 @@ public abstract class NotarizationInfo {
 	
 	private void analyseResults(NativeProcess.Result result, NotarizationInfoResult.Builder resultBuilder) throws ExecutionException {
 		try {
-			PListDict plistOutput = PListDict.fromXML(result.stdoutAsStream());
+			PListDict plist = PListDict.fromXML(result.stdoutAsStream());
 
 			if (result.exitValue() == 0) {
-				Map<?, ?> notarizationInfoList = (Map<?, ?>) plistOutput.get("notarization-info");
+				Map<?, ?> notarizationInfoList = (Map<?, ?>) plist.get("notarization-info");
 				if (notarizationInfoList != null && !notarizationInfoList.isEmpty()) {
-					parseNotarizationInfo(plistOutput, notarizationInfoList, resultBuilder);
+					parseNotarizationInfo(plist, notarizationInfoList, resultBuilder);
 				} else {
 					LOGGER.error("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
 					resultBuilder.status(NotarizationInfoResult.Status.RETRIEVAL_FAILED)
 					.message("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
 				}
 			} else {
-				parseProductError(plistOutput, resultBuilder, "Failed to notarize the requested file");
+				resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED);
+				Optional<String> errorMessage = plist.getFirstMessageFromProductErrors();
+				if (errorMessage.isPresent()) {
+					resultBuilder.message("Failed to notarize the requested file (xcrun altook exit value ="+result.exitValue()+"). Reason: " + errorMessage.get());
+				} else {
+					resultBuilder.message("Failed to notarize the requested file (xcrun altook exit value ="+result.exitValue()+").");
+				}
 			}
 		} catch (IOException | SAXException e) {
 			LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID() + "'", e);
@@ -105,55 +112,42 @@ public abstract class NotarizationInfo {
 	}
 
 	private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo, NotarizationInfoResult.Builder resultBuilder) {
-		String statusStr = (String) notarizationInfo.get("Status");
-		if ("success".equalsIgnoreCase(statusStr)) {
-			resultBuilder
-				.status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
-				.message("Notarization status: " + (String) notarizationInfo.get("Status Message"));
-			String logFileUrl = (String)notarizationInfo.get("LogFileURL");
-			if (logFileUrl != null) {
-				resultBuilder.notarizationLog(logFromServer(logFileUrl));
+		Object status = notarizationInfo.get("Status");
+		if (status instanceof String) {
+			String statusStr = (String) status;
+			if ("success".equalsIgnoreCase(statusStr)) {
+				resultBuilder
+					.status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
+					.message("Notarization status: " + (String) notarizationInfo.get("Status Message"))
+					.notarizationLog(extractLogFromServer(notarizationInfo));
+			} else if ("in progress".equalsIgnoreCase(statusStr)) {
+				resultBuilder
+					.status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
+					.message("Notarization in progress");
 			} else {
-				LOGGER.warn("Unable to find LogFileURL in parsed plist file");
-			}
-		} else if ("in progress".equalsIgnoreCase(statusStr)) {
-			resultBuilder
-				.status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
-				.message("Notarization in progress");
-		} else {
-			parseProductError(plist, resultBuilder, "Failed to notarize the requested file (Status="+statusStr+")");
+				resultBuilder
+					.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
+					.notarizationLog(extractLogFromServer(notarizationInfo));
 
-			String logFileUrl = (String)notarizationInfo.get("LogFileURL");
-			if (logFileUrl != null) {
-				resultBuilder.notarizationLog(logFromServer(logFileUrl));
-			} else {
-				LOGGER.warn("Unable to find LogFileURL in parsed plist file");
+				Optional<String> errorMessage = plist.getFirstMessageFromProductErrors();
+				if (errorMessage.isPresent()) {
+					resultBuilder.message("Failed to notarize the requested file (status="+statusStr+"). Reason: " + errorMessage.get());
+				} else {
+					resultBuilder.message("Failed to notarize the requested file (status="+statusStr+")");
+				}
 			}
+		} else {
+			throw new IllegalStateException("Cannot parse 'Status' from notarization-info");
 		}
 	}
 
-	private NotarizationInfoResult.Builder parseProductError(PListDict plist, NotarizationInfoResult.Builder resultBuilder, String failureMessage) {
-		Object rawProductErrors = plist.get("product-errors");
-
-		if (rawProductErrors instanceof List) {
-			List<?> productErrors = (List<?>) rawProductErrors;
-			if (!productErrors.isEmpty()) {
-				Object rawFirstError = productErrors.get(0);
-				if (rawFirstError instanceof Map<?, ?>) {
-					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
-					if (firstError != null) {
-						return resultBuilder
-								.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-								.message(failureMessage + ". Reason: " + firstError.get("message"));
-					} 
-				}
-			}
+	private String extractLogFromServer(Map<?, ?> notarizationInfo) {
+		Object logFileUrl = notarizationInfo.get("LogFileURL");
+		if (logFileUrl instanceof String) {
+			return logFromServer((String) logFileUrl);
+		} else {
+			return "Unable to find LogFileURL in parsed plist file";
 		}
-
-		LOGGER.warn("PList=" + plist);
-		return resultBuilder
-				.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-				.message(failureMessage + ". Reason: unable to parse the reason message");
 	}
 
 	private String logFromServer(String logFileUrl) {
@@ -164,11 +158,11 @@ public abstract class NotarizationInfo {
 			return "Error while retrieving log from Apple server";
 		}
 	}
-	
+
 	public static Builder builder() {
 		return new AutoValue_NotarizationInfo.Builder();
 	}
-	
+
 	@AutoValue.Builder
 	public static abstract class Builder {
 		public abstract Builder appleIDUsername(String appleIDUsername);

@@ -145,6 +145,7 @@ public abstract class NotarizationRequest {
 						default:
 							throw new IllegalStateException("Unknown status " + result.status());
 					}
+					statusBuilder.log(result.notarizationLog());
 					statusBuilder.moreInfo(result.message());
 				}
 				Builder.this.status().set(statusBuilder.build());
@@ -160,11 +161,13 @@ public abstract class NotarizationRequest {
 					switch (result.status()) {
 						case SUCCESS:
 							statusBuilder.status(State.COMPLETE)
-							.message("Notarization ticket has been stapled successfully to uploaded file. You can now download the stapled file");
+							.message("Notarization ticket has been stapled successfully to uploaded file. You can now download the stapled file")
+							.log(status().get().log());
 							break;
 						case ERROR:
 							statusBuilder.status(State.ERROR)
-							.message("Error happened while stapling notarization ticket to uploaded file. Notarization has been successful though");
+							.message("Error happened while stapling notarization ticket to uploaded file. Notarization has been successful though")
+							.log(status().get().log());
 							break;
 						default:
 							throw new IllegalStateException("Unknown status " + result.status());

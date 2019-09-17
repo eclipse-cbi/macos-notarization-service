@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
@@ -26,6 +26,7 @@ import net.jodah.failsafe.RetryPolicy;
 public abstract class Notarizer {
 
 	private static final Pattern UPLOADID_PATTERN = Pattern.compile(".*The upload ID is ([A-Za-z0-9\\\\-]*).*");
+	private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile(".*\"(.*)\".*");
 
 	private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
 
@@ -86,60 +87,78 @@ public abstract class Notarizer {
 	private NotarizerResult analyzeResult(NativeProcess.Result nativeProcessResult) throws ExecutionException {
 		NotarizerResult.Builder resultBuilder = NotarizerResult.builder();
 		try {
-			PListDict plistOutput = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
-						
+			PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
 			if (nativeProcessResult.exitValue() == 0) {
-				resultBuilder
-					.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-					.message((String) plistOutput.get("success-message"))
-					.appleRequestUUID((String) ((Map<String,Object>) plistOutput.get("notarization-upload")).get("RequestUUID"));
-			} else if (nativeProcessResult.exitValue() == 176) { // 176 seems to mean: already uploaded
-				resultBuilder
-				.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-				.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)");
-				parseAppleRequestIDFromProductErrors(plistOutput, resultBuilder);
+				Optional<String> requestUUID = plist.getRequestUUIDFromNotarizationUpload();
+				if (requestUUID.isPresent()) {
+					resultBuilder
+						.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+						.message((String) plist.get("success-message"))
+						.appleRequestUUID(requestUUID.get());
+				} else {
+					throw new IllegalStateException("Cannot find the Apple request ID from response " + plist.toString());
+				}
+			} else if (nativeProcessResult.exitValue() == 176) { // 176 seems to mean remote error
+				analyzeExitValue176(plist, resultBuilder);
 			} else {
-				resultBuilder
+				Optional<String> productErrors = plist.getFirstMessageFromProductErrors();
+				if (productErrors.isPresent()) {
+					resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_FAILED)
-					.message("Failed to notarize the requested file. Reason: " + (String) ((List<Map<String, Object>>) plistOutput.get("product-errors")).get(0).get("message"));
+					.message("Failed to notarize the requested file. Reason: " + productErrors.get());
+				} else {
+					resultBuilder
+					.status(NotarizerResult.Status.UPLOAD_FAILED)
+					.message("Failed to notarize the requested file. Reason: xcrun altool exit value was " + nativeProcessResult.exitValue());
+				}
 			}
-			
 		} catch (IOException | SAXException e) {
 			LOGGER.error("Error while parsing the output after the upload of '" + fileToNotarize() + "' to the Apple notarization service", e);
 			throw new ExecutionException("Error while parsing the output after the upload of the file to be notarized", e);
 		}
 		return resultBuilder.build();
 	}
-	
-	private void parseAppleRequestIDFromProductErrors(PListDict plist, NotarizerResult.Builder resultBuilder) {
-		Object rawProductErrors = plist.get("product-errors");
-		if (rawProductErrors instanceof List) {
-			List<?> productErrors = (List<?>) rawProductErrors;
-			if (!productErrors.isEmpty()) {
-				Object rawFirstError = productErrors.get(0);
-				if (rawFirstError instanceof Map<?, ?>) {
-					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
-					if (firstError != null) {
-						Object message = firstError.get("message");
-						LOGGER.trace("parseAppleRequestIDFromProductErrors.message<=" + message);
-						if (message instanceof String) {
-							try {
-								Matcher matcher = UPLOADID_PATTERN.matcher((String)message);
-								if (matcher.matches()) {
-									resultBuilder.appleRequestUUID(matcher.group(1));
-								}
-							} catch (IllegalStateException e) {
-								throw new IllegalStateException("Error while parsing Apple request ID from xcrun output", e);
-							}
-							return;
-						}
-					}
+
+	private void analyzeExitValue176(PListDict plist, NotarizerResult.Builder resultBuilder) {
+		Optional<String> rawErrorMessage = plist.getFirstMessageFromProductErrors();
+		if (rawErrorMessage.isPresent()) {
+			String errorMessage = rawErrorMessage.get();
+			if (errorMessage.contains("ITMS-4302")) { // ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"
+				resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED);
+				Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(errorMessage);
+				if (matcher.matches()) {
+					resultBuilder.message(matcher.group(1));
+				} else {
+					resultBuilder.message("The software asset has an invalid primary bundle identifier");
 				}
+			} else if (errorMessage.contains("ITMS-90732")) { // ERROR ITMS-90732: "The software asset has already been uploaded. The upload ID is {}"
+				Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
+				if (appleRequestID.isPresent()) {
+					resultBuilder.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+					.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
+					.appleRequestUUID(appleRequestID.get());
+				} else {
+					throw new IllegalStateException("Cannot parse the Apple request ID from error message while error is ITMS-90732");
+				}
+			} else {
+				resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
+				.message("Failed to notarize the requested file. Reason: " + errorMessage);
 			}
 		}
-		throw new RuntimeException("Unable to retrieve appleRequestId from error message from " + plist.toString());
 	}
-	
+
+	private Optional<String> parseAppleRequestID(String message) {
+		try {
+			Matcher matcher = UPLOADID_PATTERN.matcher(message);
+			if (matcher.matches()) {
+				return Optional.of(matcher.group(1));
+			}
+		} catch (IllegalStateException e) {
+			LOGGER.info("No Apple request ID in xcrun output", e);
+		}
+		return Optional.empty();
+	}
+
 	@AutoValue.Builder
 	public static abstract class Builder {
 		public abstract Builder primaryBundleId(String primaryBundleId);

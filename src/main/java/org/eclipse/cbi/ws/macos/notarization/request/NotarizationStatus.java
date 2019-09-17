@@ -16,8 +16,11 @@ public abstract class NotarizationStatus {
 	@Nullable
 	public abstract String moreInfo();
 
+	@Nullable
+	public abstract String log();
+
 	abstract NotarizationStatus.Builder toBuilder();
-	
+
 	static NotarizationStatus.Builder builder() {
 		return new AutoValue_NotarizationStatus.Builder();
 	}
@@ -27,8 +30,10 @@ public abstract class NotarizationStatus {
 		abstract NotarizationStatus.Builder status(NotarizationStatus.State status);
 
 		abstract NotarizationStatus.Builder message(String message);
-		
+
 		abstract NotarizationStatus.Builder moreInfo(String moreInfo);
+
+		abstract NotarizationStatus.Builder log(String log);
 
 		abstract NotarizationStatus build();
 	}
