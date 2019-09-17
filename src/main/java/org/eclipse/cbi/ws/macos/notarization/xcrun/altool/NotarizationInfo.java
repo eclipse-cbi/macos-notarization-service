@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -97,12 +98,24 @@ public abstract class NotarizationInfo {
 					.message("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
 				}
 			} else {
-				resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED);
-				Optional<String> errorMessage = plist.getFirstMessageFromProductErrors();
-				if (errorMessage.isPresent()) {
-					resultBuilder.message("Failed to notarize the requested file (xcrun altook exit value ="+result.exitValue()+"). Reason: " + errorMessage.get());
+				resultBuilder.status(NotarizationInfoResult.Status.RETRIEVAL_FAILED);
+				OptionalInt firstProductErrorCode = plist.firstProductErrorCode();
+				if (firstProductErrorCode.isPresent()) {
+					switch (firstProductErrorCode.getAsInt()) {
+						case 1519: // Could not find the RequestUUID.
+							resultBuilder.message("Error while retrieving notarization info from Apple service. Remote service could not find the RequestUUID");
+							break;
+						default:
+							resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+result.exitValue()+").");
+							break;
+					}
 				} else {
-					resultBuilder.message("Failed to notarize the requested file (xcrun altook exit value ="+result.exitValue()+").");
+					Optional<String> errorMessage = plist.messageFromFirstProductError();
+					if (errorMessage.isPresent()) {
+						resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+result.exitValue()+"). Reason: " + errorMessage.get());
+					} else {
+						resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+result.exitValue()+").");
+					}
 				}
 			}
 		} catch (IOException | SAXException e) {
@@ -129,12 +142,9 @@ public abstract class NotarizationInfo {
 					.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
 					.notarizationLog(extractLogFromServer(notarizationInfo));
 
-				Optional<String> errorMessage = plist.getFirstMessageFromProductErrors();
-				if (errorMessage.isPresent()) {
-					resultBuilder.message("Failed to notarize the requested file (status="+statusStr+"). Reason: " + errorMessage.get());
-				} else {
-					resultBuilder.message("Failed to notarize the requested file (status="+statusStr+")");
-				}
+				Optional<String> errorMessage = plist.messageFromFirstProductError();
+				OptionalInt errorCode = plist.firstProductErrorCode();
+				resultBuilder.message("Failed to notarize the requested file (status="+statusStr+"). Error code="+errorCode+". Reason: " + errorMessage);
 			}
 		} else {
 			throw new IllegalStateException("Cannot parse 'Status' from notarization-info");

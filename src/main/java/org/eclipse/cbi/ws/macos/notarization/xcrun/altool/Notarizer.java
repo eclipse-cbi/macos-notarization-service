@@ -89,7 +89,7 @@ public abstract class Notarizer {
 		try {
 			PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
 			if (nativeProcessResult.exitValue() == 0) {
-				Optional<String> requestUUID = plist.getRequestUUIDFromNotarizationUpload();
+				Optional<String> requestUUID = plist.requestUUIDFromNotarizationUpload();
 				if (requestUUID.isPresent()) {
 					resultBuilder
 						.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
@@ -101,7 +101,7 @@ public abstract class Notarizer {
 			} else if (nativeProcessResult.exitValue() == 176) { // 176 seems to mean remote error
 				analyzeExitValue176(plist, resultBuilder);
 			} else {
-				Optional<String> productErrors = plist.getFirstMessageFromProductErrors();
+				Optional<String> productErrors = plist.messageFromFirstProductError();
 				if (productErrors.isPresent()) {
 					resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_FAILED)
@@ -120,7 +120,7 @@ public abstract class Notarizer {
 	}
 
 	private void analyzeExitValue176(PListDict plist, NotarizerResult.Builder resultBuilder) {
-		Optional<String> rawErrorMessage = plist.getFirstMessageFromProductErrors();
+		Optional<String> rawErrorMessage = plist.messageFromFirstProductError();
 		if (rawErrorMessage.isPresent()) {
 			String errorMessage = rawErrorMessage.get();
 			if (errorMessage.contains("ITMS-4302")) { // ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"

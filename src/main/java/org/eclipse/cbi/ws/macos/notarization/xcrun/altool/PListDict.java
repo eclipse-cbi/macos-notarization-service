@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.ParserConfigurationException;
@@ -131,29 +132,49 @@ class PListDict extends ForwardingMap<String, Object> {
 		return result;
 	}
 
-	Optional<String> getFirstMessageFromProductErrors() {
+	Optional<Map<?,?>> firstProductErrors() {
 		Object rawProductErrors = get("product-errors");
 		if (rawProductErrors instanceof List<?>) {
 			List<?> productErrors = (List<?>) rawProductErrors;
 			if (!productErrors.isEmpty()) {
 				Object rawFirstError = productErrors.get(0);
 				if (rawFirstError instanceof Map<?, ?>) {
-					Map<?, ?> firstError = (Map<?, ?>) productErrors.get(0);
-					if (firstError != null) {
-						Object message = firstError.get("message");
-						LOGGER.trace("firstMessageFromProductErrors.message=" + message);
-						if (message instanceof String) {
-							return Optional.of((String) message);
-						}
-					}
+					return Optional.of((Map<?,?>)rawFirstError);
 				}
+			}
+		}
+		return Optional.empty();
+	}
+	
+	OptionalInt firstProductErrorCode() {
+		Optional<Map<?, ?>> firstProductError = firstProductErrors();
+		if (firstProductError.isPresent()) {
+			Object rawCode = firstProductError.get().get("code");
+			if (rawCode instanceof String) {
+				try {
+					return OptionalInt.of(Integer.parseInt((String) rawCode));
+				} catch (NumberFormatException e) {
+					LOGGER.debug("Error code from plist is not a parseable integer: " + rawCode);
+				}
+			}
+		}
+		return OptionalInt.empty();
+	}
+	
+	Optional<String> messageFromFirstProductError() {
+		Optional<Map<?, ?>> firstError = firstProductErrors();
+		if (firstError.isPresent()) {
+			Object message = firstError.get().get("message");
+			LOGGER.trace("firstMessageFromProductErrors.message=" + message);
+			if (message instanceof String) {
+				return Optional.of((String) message);
 			}
 		}
 		LOGGER.debug("Unable to retrieve first 'message' from product-errors in " + toString());
 		return Optional.empty();
 	}
 
-	Optional<String> getRequestUUIDFromNotarizationUpload() {
+	Optional<String> requestUUIDFromNotarizationUpload() {
 		Object rawNotariationUpload = get("notarization-upload");
 		if (rawNotariationUpload instanceof Map<?,?>) {
 			Map<?,?> notariationUpload = (Map<?, ?>) rawNotariationUpload;
