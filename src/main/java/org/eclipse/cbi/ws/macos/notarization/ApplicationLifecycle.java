@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -34,9 +36,9 @@ public class ApplicationLifecycle {
       Files.createDirectories(pendingFilesPath);
     } else {
       LOGGER.info("Cleaning up folder '{}'", pendingFilesPath);
-      Files.walk(pendingFilesPath)
-      .map(Path::toFile)
-      .forEach(File::delete);
+      try (Stream<File> filesToDelete = Files.walk(pendingFilesPath).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
+				filesToDelete.forEach(File::delete);
+			}
       Files.createDirectories(pendingFilesPath);
     }
   }

@@ -1,15 +1,19 @@
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.slf4j.Logger;
@@ -31,6 +35,7 @@ public abstract class Notarizer {
 	private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Notarizer.class);
+	private static final String TMPDIR = "TMPDIR";
 
 	abstract String primaryBundleId();
 
@@ -46,7 +51,7 @@ public abstract class Notarizer {
 		return new AutoValue_Notarizer.Builder();
 	}
 
-	public NotarizerResult upload() throws ExecutionException {
+	public NotarizerResult upload() throws ExecutionException, IOException {
 		List<String> cmd = ImmutableList.<String>builder()
 				.add("xcrun", "altool")
 				.add("--notarize-app")
@@ -56,8 +61,10 @@ public abstract class Notarizer {
 				.add("--primary-bundle-id", primaryBundleId())
 				.add("--file", fileToNotarize().toString()).build();
 
+		Path xcrunTempFolder = Files.createTempDirectory(fileToNotarize().getParent(), com.google.common.io.Files.getNameWithoutExtension(fileToNotarize().toString())+ "-xcrun-");
 		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
 		processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword());
+		processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
 
 		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, uploadTimeout())) {
 			NotarizerResult result = analyzeResult(nativeProcessResult);
@@ -69,6 +76,13 @@ public abstract class Notarizer {
 		} catch (IOException e) {
 			LOGGER.error("IOException happened during notarization upload of file " + fileToNotarize(), e.getMessage());
 			throw new ExecutionException("IOException happened during notarization upload", e);
+		} finally {
+			if (xcrunTempFolder != null && Files.exists(xcrunTempFolder)) {
+				LOGGER.debug("Deleting xcrun temporary folder " + xcrunTempFolder);
+				try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
+					filesToDelete.forEach(File::delete);
+				}
+			}
 		}
 	}
 
