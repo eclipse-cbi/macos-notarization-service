@@ -58,7 +58,7 @@ public abstract class Stapler {
 				.handleResultIf(info -> info.status() == StaplerResult.Status.ERROR)
 				.withMaxAttempts(maxFailedAttempts)
 				.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
-				.onRetry(l -> LOGGER.trace("Retry stapling notarization ticket because of failure (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult()!=null?l.getLastResult().toString():"<null>" + ", lastFailure:\n"+l.getLastFailure()!=null?l.getLastFailure().toString():"<null>"));
+				.onFailedAttempt(l -> LOGGER.trace("Retry stapling notarization ticket because of failure (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 		
 		return Failsafe.with(retryOnFailure)
 				.onFailure(l -> LOGGER.error("Failure on notarization ticket stapling attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))

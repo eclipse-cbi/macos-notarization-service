@@ -73,14 +73,14 @@ public abstract class NotarizationInfo {
 				.abortOn(Throwable.class)
 				.withMaxDuration(maxTotalDuration)
 				.withDelay(delayBetweenPolling)
-				.onRetry(l -> LOGGER.trace("Retry fetching notarization info because it's still in progress (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult()!=null?l.getLastResult().toString():"<null>" + ", lastFailure:\n"+l.getLastFailure()!=null?l.getLastFailure().toString():"<null>"));
+				.onFailedAttempt(l -> LOGGER.trace("Notarization is still in progress on Apple services (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 		RetryPolicy<NotarizationInfoResult> retryOnFailure = new RetryPolicy<NotarizationInfoResult>()
 				.handleResultIf(info -> info.status() == NotarizationInfoResult.Status.RETRIEVAL_FAILED)
 				.withMaxAttempts(maxFailedAttempt)
 				.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
-				.onRetry(l -> LOGGER.trace("Retry fetching notarization info because of previous error (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult()!=null?l.getLastResult().toString():"<null>" + ", lastFailure:\n"+l.getLastFailure()!=null?l.getLastFailure().toString():"<null>"));
+				.onFailedAttempt(l -> LOGGER.trace("Failed to fetch notarization info because of previous error (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 		return Failsafe.with(retryOnFailure, watchUntilCompleted)
-				.onFailure(l -> LOGGER.error("Failure on notarization info retrieval attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
+				.onFailure(l -> LOGGER.error("Fail to fetch notarization info retrieval attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
 				.get(this::retrieveInfo);
 	}
 	

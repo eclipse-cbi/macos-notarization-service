@@ -77,7 +77,7 @@ public abstract class Notarizer {
 				.handleResultIf(info -> info.status() == NotarizerResult.Status.UPLOAD_FAILED)
 				.withMaxAttempts(maxFailedAttempts)
 				.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
-				.onRetry(l -> LOGGER.trace("Retry uploading file for notarization because of failure (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult()!=null?l.getLastResult().toString():"<null>" + ", lastFailure:\n"+l.getLastFailure()!=null?l.getLastFailure().toString():"<null>"));
+				.onFailedAttempt(l -> LOGGER.trace("Failed to upload file for notarization because of failure (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 
 		return Failsafe.with(retryOnFailure)
 				.onFailure(l -> LOGGER.error("Failure on notarization upload attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
