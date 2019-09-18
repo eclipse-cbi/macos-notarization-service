@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -156,7 +157,7 @@ public class NotarizationService {
 			throws IOException {
 		Path fileToNotarize = createTempFile(Paths.get(pendingFilesPath), formData.submittedFilename("file").orElse("unknown"));
 
-		Files.copy(file, fileToNotarize);
+		Files.copy(file, fileToNotarize, StandardCopyOption.REPLACE_EXISTING);
 
 		NotarizationRequest.Builder requestBuilder = NotarizationRequest.builder().fileToNotarize(fileToNotarize)
 				.submittedFilename(formData.submittedFilename("file").orElse(null)).notarizationOptions(options);
