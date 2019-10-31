@@ -8,14 +8,28 @@ This is a web service that runs on macOS and offers a REST API to notarize signe
 
 ### Requirements
 
-  Java 8+. We advise you use the [AdoptOpenJDK](https://adoptopenjdk.net) binaries via [homebrew](https://brew.sh)
+* Java 8+. We advise you use the [AdoptOpenJDK](https://adoptopenjdk.net) binaries via [homebrew](https://brew.sh)
 
+```bash
     brew tap AdoptOpenJDK/openjdk
     brew cask install adoptopenjdk8
+```
 
 ### Build
 
     ./mvnw clean package
+    
+It produces 2 jar files in `/target`:
+
+* `macos-notarization-service-1.0-SNAPSHOT.jar` - containing just the classes and resources of the projects, it’s the regular artifact produced by the Maven build;
+
+* `macos-notarization-service-1.0-SNAPSHOT-runner.jar` - being an executable jar. Be aware that it’s not an über-jar as the dependencies are copied into the target/lib directory.
+
+You can run the application using: `java -jar target/macos-notarization-service-1.0-SNAPSHOT-runner.jar`
+
+The Class-Path entry of the `MANIFEST.MF` from the runner jar explicitly lists the jars from the lib directory. So if you want to deploy your application somewhere, you need to copy the runner jar as well as the lib directory.
+
+See below for advanced startup method.
 
 ### Run
 
