@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+        <dict>
+                <key>Label</key>
+                <string>org.eclipse.cbi.macos-notarization-service</string>
+
+                <key>Program</key>
+                <string>/usr/local/webservices/notarization/start.sh</string>
+
+                <key>WorkingDirectory</key>
+                <string>/usr/local/webservices/notarization</string>
+
+                <key>StandardOutPath</key>
+                <string>/usr/local/webservices/notarization/log/start.stdout.log</string>
+                <key>StandardErrorPath</key>
+                <string>/usr/local/webservices/notarization/log/start.stderr.log</string>
+
+                <key>UserName</key>
+                <string>USER_RUNNING_NOTARIZATION_SERVICE</string>
+                <key>GroupName</key>
+                <string>staff</string>
+                <key>SessionCreate</key>
+                <true/>
+
+                <key>RunAtLoad</key>
+                <true/>
+                <key>KeepAlive</key>
+                <true/>
+        </dict>
+</plist>
