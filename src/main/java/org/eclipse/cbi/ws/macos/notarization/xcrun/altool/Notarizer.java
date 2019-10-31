@@ -1,3 +1,10 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Eclipse Foundation and others.
+ * This program and the accompanying materials are made available
+ * under the terms of the Eclipse Public License 2.0
+ * which is available at http://www.eclipse.org/legal/epl-v20.html
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
 import java.io.File;
@@ -15,13 +22,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
-
-import com.google.auto.value.AutoValue;
-import com.google.common.collect.ImmutableList;
 
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;

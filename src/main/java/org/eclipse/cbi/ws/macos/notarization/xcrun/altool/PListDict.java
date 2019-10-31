@@ -1,3 +1,10 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Eclipse Foundation and others.
+ * This program and the accompanying materials are made available
+ * under the terms of the Eclipse Public License 2.0
+ * which is available at http://www.eclipse.org/legal/epl-v20.html
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
 import java.io.BufferedInputStream;
@@ -18,14 +25,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import com.google.common.collect.ForwardingMap;
+import com.google.common.collect.ImmutableSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
-import com.google.common.collect.ForwardingMap;
-import com.google.common.collect.ImmutableSet;
 
 class PListDict extends ForwardingMap<String, Object> {
 

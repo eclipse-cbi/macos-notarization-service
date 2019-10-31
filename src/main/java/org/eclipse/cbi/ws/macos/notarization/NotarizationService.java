@@ -1,3 +1,10 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Eclipse Foundation and others.
+ * This program and the accompanying materials are made available
+ * under the terms of the Eclipse Public License 2.0
+ * which is available at http://www.eclipse.org/legal/epl-v20.html
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization;
 
 import java.io.IOException;
@@ -23,6 +30,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
+import com.squareup.moshi.Moshi;
+
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequest;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequestOptions;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus;
@@ -36,8 +45,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.squareup.moshi.Moshi;
 
 import okhttp3.OkHttpClient;
 
