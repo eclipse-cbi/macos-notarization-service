@@ -54,8 +54,9 @@ public class NativeProcess {
 					return new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err);
 				} else {
 					LOGGER.error(
-							"Process '" + arg0 + "' did not stop even after being forcibly destroyed. Current output:\n"
-									+ firstLinesAsString(out, 32));
+							"Process '" + arg0 + "' did not stop even after being forcibly destroyed. \n" 
+									+ "Current stdout:\n" + stdioContent(out) + "\n"
+									+ "Current stderr:\n" + stdioContent(err)+"\n");
 					throw new RuntimeException(
 							"Process '" + arg0 + "' did not stop even after being forcibly destroyed");
 				}
@@ -72,19 +73,15 @@ public class NativeProcess {
 		return result.log();
 	}
 
-	static String firstLinesAsString(Path path, int limit) {
-		String lines = "";
+	static String stdioContent(Path stdio) {
 		try {
-			lines = Files.lines(path).limit(limit).collect(Collectors.joining("\n"));
-			if (Files.lines(path).limit(limit + 1).count() > limit) {
-				return lines + "\n... Trimmed content. Enable 'trace' level logging to see full output\n";
-			}
+			return Files.lines(stdio).collect(Collectors.joining("\n"));
 		} catch (IOException e) {
-			LOGGER.warn("Error while logging the "+limit+" first lines of '" + path + "'");
+			LOGGER.warn("Error while collecting content of '" + stdio + "'", e);
+			return e.getMessage();
 		}
-		return lines;
 	}
-	
+
 	@AutoValue
 	public static abstract class Result implements AutoCloseable {
 		public abstract int exitValue();
@@ -132,18 +129,6 @@ public class NativeProcess {
 			}
 		}
 
-		private String stdioContent(Path stdio) throws IOException {
-			final String content;
-			if (LOGGER.isTraceEnabled()) {
-				content = Files.lines(stdio).collect(Collectors.joining("\n"));
-			} else if (exitValue() != 0 || LOGGER.isDebugEnabled()) {
-				content = firstLinesAsString(stdio, 32);
-			} else {
-				content = "Logic error during " + NativeProcess.class.getName() + " logging. This content should never be printed!";
-			}
-			return content;
-		}
-		
 		@Override
 		public void close() {
 			deleteIfExists(stdout());

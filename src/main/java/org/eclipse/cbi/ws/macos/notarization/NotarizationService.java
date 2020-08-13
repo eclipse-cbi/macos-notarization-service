@@ -50,7 +50,7 @@ import okhttp3.OkHttpClient;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@javax.ws.rs.Path("/macos-notarization-service")
+@javax.ws.rs.Path("/")
 public class NotarizationService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationService.class);

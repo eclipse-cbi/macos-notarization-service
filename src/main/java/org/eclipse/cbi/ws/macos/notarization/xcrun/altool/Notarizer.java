@@ -165,6 +165,10 @@ public abstract class Notarizer {
 				resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
 				.message("Failed to notarize the requested file. Reason: " + errorMessage);
 			}
+		} else {
+			resultBuilder
+					.status(NotarizerResult.Status.UPLOAD_FAILED)
+					.message("Failed to notarize the requested file. Reason: xcrun altool exit value was 176 with no parsable error message. See server log for more details.");
 		}
 	}
 
