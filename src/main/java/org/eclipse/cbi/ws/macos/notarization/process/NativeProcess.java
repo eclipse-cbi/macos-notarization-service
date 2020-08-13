@@ -26,7 +26,7 @@ public class NativeProcess {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NativeProcess.class);
 	
-	private static final int DESTROY_FORCIBLY_GRACETIME_MILLIS = 500;
+	private static final int DESTROY_GRACETIME_MILLIS = 5000;
 
 	public static Result startAndWait(ProcessBuilder processBuilder, Duration timeout) throws TimeoutException, IOException {
 		String arg0 = processBuilder.command().iterator().next();
@@ -40,26 +40,16 @@ public class NativeProcess {
 
 		try {
 			if (!p.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) { // timeout
-				p.destroyForcibly();
+				destroy(p, arg0, out, err);
 				throw new TimeoutException("Process '" + arg0
-						+ "' has been stopped forcibly. It did not complete in less than " + timeout);
+						+ "' has been interrupted. It did not complete in less than " + timeout);
 			}
 		} catch (InterruptedException e) { // we've been interrupted
 			LOGGER.error("Thread '" + Thread.currentThread().getName()
-					+ "' has been interrupted while waiting for the process '" + arg0 + "' to complete.", e);
-			
+				+ "' has been interrupted while waiting for the process '" + arg0 + "' to complete.", e);
+
 			try {
-				// kill the subprocess and wait a bit before checking if it has been destroyed for real
-				if (p.destroyForcibly().waitFor(DESTROY_FORCIBLY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS) && !p.isAlive()) {
-					return new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err);
-				} else {
-					LOGGER.error(
-							"Process '" + arg0 + "' did not stop even after being forcibly destroyed. \n" 
-									+ "Current stdout:\n" + stdioContent(out) + "\n"
-									+ "Current stderr:\n" + stdioContent(err)+"\n");
-					throw new RuntimeException(
-							"Process '" + arg0 + "' did not stop even after being forcibly destroyed");
-				}
+				destroy(p, arg0, out, err);
 			} catch (@SuppressWarnings("unused") InterruptedException e1) { // we've been interrupted, again (!)
 				// we will restore the interrupted status soon.
 			}
@@ -68,12 +58,23 @@ public class NativeProcess {
 			Thread.currentThread().interrupt();
 		}
 
-		@SuppressWarnings("resource")
 		AutoValue_NativeProcess_Result result = new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err);
 		return result.log();
 	}
 
-	static String stdioContent(Path stdio) {
+	private static void destroy(Process p, String arg0, Path out, Path err) throws InterruptedException {
+		p.destroy();
+		if (!p.waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
+			if (!p.destroyForcibly().waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
+				LOGGER.error(
+					"Process '" + arg0 + "' did not stop even after being forcibly destroyed. \n" 
+							+ "Current stdout:\n" + stdioContent(out) + "\n"
+							+ "Current stderr:\n" + stdioContent(err)+"\n");
+			}
+		}
+	}
+
+	private static String stdioContent(Path stdio) {
 		try {
 			return Files.lines(stdio).collect(Collectors.joining("\n"));
 		} catch (IOException e) {
