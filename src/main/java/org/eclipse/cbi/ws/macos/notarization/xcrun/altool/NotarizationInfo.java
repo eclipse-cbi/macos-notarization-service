@@ -77,12 +77,13 @@ public abstract class NotarizationInfo {
 		RetryPolicy<NotarizationInfoResult> watchUntilCompleted = new RetryPolicy<NotarizationInfoResult>()
 				.handleResultIf(info -> info.status() == NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
 				.withMaxAttempts(-1)
-				.abortOn(Throwable.class)
+				.abortOn(t -> !(t instanceof ExecutionException))
 				.withMaxDuration(maxTotalDuration)
 				.withDelay(delayBetweenPolling)
 				.onFailedAttempt(l -> LOGGER.trace("Notarization is still in progress on Apple services (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 		RetryPolicy<NotarizationInfoResult> retryOnFailure = new RetryPolicy<NotarizationInfoResult>()
 				.handleResultIf(info -> info.status() == NotarizationInfoResult.Status.RETRIEVAL_FAILED)
+				.handleIf(t -> t instanceof ExecutionException)
 				.withMaxAttempts(maxFailedAttempt)
 				.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
 				.onFailedAttempt(l -> LOGGER.trace("Failed to fetch notarization info because of previous error (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));

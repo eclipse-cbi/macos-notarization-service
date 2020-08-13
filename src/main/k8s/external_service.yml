@@ -1,0 +1,43 @@
+kind: "Service"
+apiVersion: "v1"
+metadata:
+  namespace: "foundation-internal-cbi-services"
+  name: "macos-notarization-service"
+spec:
+  ports:
+    - name: "http"
+      protocol: "TCP"
+      port: 8080
+      targetPort: 8383
+      nodePort: 0
+  selector: {}
+---
+kind: "Endpoints"
+apiVersion: "v1"
+metadata:
+  namespace: "foundation-internal-cbi-services"
+  name: "macos-notarization-service" 
+subsets: 
+  - addresses:
+      - ip: "172.30.206.145" 
+      # - ip: "172.30.206.146" 
+    ports:
+      - port: 8383
+        name: "http"
+---
+apiVersion: "route.openshift.io/v1"
+kind: Route
+metadata:
+  namespace: "foundation-internal-cbi-services"
+  name: macos-notarization-service
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s
+spec:
+  host: cbi.eclipse.org.internal
+  path: "/macos-notarization-service"
+  port:
+    targetPort: "http"
+  to:
+    kind: Service
+    name: macos-notarization-service
+    weight: 100
