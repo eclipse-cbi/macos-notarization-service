@@ -41,15 +41,16 @@ public class NotarizationCache {
       .expireAfterWrite(Duration.parse(cacheExpireAfterWrite))
       .recordStats()
       .removalListener(RemovalListeners.asynchronous((RemovalNotification<UUID, NotarizationRequest> notification) -> {
-	    LOGGER.trace("Removing expired request {} from cache", notification.getValue());
-	    if (!notification.getValue().request().isDone()) {
-		  LOGGER.warn("The notarization background process was not done before removal from cache. It will be cancelled");
-		  notification.getValue().request().cancel(true);
-	    }
+        final NotarizationRequest request = notification.getValue();
+        LOGGER.trace("Removing expired request {} from cache", request);
+        if (!request.request().isDone()) {
+          LOGGER.warn("The notarization background process was not done before removal from cache. It will be cancelled");
+          request.request().cancel(true);
+        }
         try {
-          Files.deleteIfExists(notification.getValue().fileToNotarize());
+          Files.deleteIfExists(request.fileToNotarize());
         } catch (IOException e) {
-          LOGGER.warn(String.format("Unable to delete user uploaded file to notarize after cache eviction of\n%s", notification.getValue()), e);
+          LOGGER.warn(String.format("Unable to delete user uploaded file '%s' to notarize after cache eviction of\n%s", request.fileToNotarize(), request), e);
         }
       }, Executors.newSingleThreadExecutor()))
       .build();
