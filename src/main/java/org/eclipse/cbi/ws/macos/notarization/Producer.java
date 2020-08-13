@@ -60,7 +60,7 @@ public class Producer {
 	
 	@Produces
 	OkHttpClient produceOkHttpClient() {
-		return new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(5)).build();
+		return new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
 	}
 
 }
