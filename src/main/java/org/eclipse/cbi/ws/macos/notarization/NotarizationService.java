@@ -80,11 +80,11 @@ public class NotarizationService {
 	String appleIDUsername;
 
 	@Inject
-	@ConfigProperty(name = "notarization.upload.timeout", defaultValue = "PT20M")
+	@ConfigProperty(name = "notarization.upload.timeout", defaultValue = "PT60M")
 	Duration uploadTimeout;
 
 	@Inject
-	@ConfigProperty(name = "notarization.upload.maxAttempts", defaultValue = "3")
+	@ConfigProperty(name = "notarization.upload.maxAttempts", defaultValue = "4")
 	int uploadMaxAttempts;
 
 	@Inject
@@ -104,7 +104,7 @@ public class NotarizationService {
 	Duration infoPollingDelayBetweenSuccessfulAttempts;
 
 	@Inject
-	@ConfigProperty(name = "notarization.infoPolling.maxFailedAttempts", defaultValue = "8")
+	@ConfigProperty(name = "notarization.infoPolling.maxFailedAttempts", defaultValue = "16")
 	int infoPollingMaxFailedAttempts;
 
 	@Inject
@@ -116,11 +116,11 @@ public class NotarizationService {
 	Duration infoPollingMaxBackOffDelay;
 
 	@Inject
-	@ConfigProperty(name = "notarization.infoPolling.timeout", defaultValue = "PT30S")
+	@ConfigProperty(name = "notarization.infoPolling.timeout", defaultValue = "PT2M")
 	Duration infoPollingTimeout;
 
 	@Inject
-	@ConfigProperty(name = "notarization.stapling.timeout", defaultValue = "PT2M")
+	@ConfigProperty(name = "notarization.stapling.timeout", defaultValue = "PT4M")
 	Duration staplingTimeout;
 
 	@Inject

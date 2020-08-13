@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.FailsafeException;
 import net.jodah.failsafe.RetryPolicy;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -170,9 +171,11 @@ public abstract class NotarizationInfo {
 
 	private String logFromServer(String logFileUrl) {
 		try {
-			return httpClient().newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string();
-		} catch (IOException e) {
-			LOGGER.error("Error while retrieving log from Apple server", e);
+			RetryPolicy<String> retryPolicy = new RetryPolicy<String>().withDelay(Duration.ofSeconds(10));
+			return Failsafe.with(retryPolicy).get(() -> 
+			httpClient().newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string());
+		} catch (FailsafeException e) {
+			LOGGER.error("Error while retrieving log from Apple server", e.getCause());
 			return "Error while retrieving log from Apple server";
 		}
 	}
