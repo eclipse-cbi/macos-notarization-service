@@ -175,7 +175,7 @@ public abstract class NotarizationInfo {
 			return Failsafe.with(retryPolicy).get(() -> 
 			httpClient().newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string());
 		} catch (FailsafeException e) {
-			LOGGER.error("Error while retrieving log from Apple server", e.getCause());
+			LOGGER.error("Error while retrieving log from Apple server (logFileURL="+logFileUrl+")", e.getCause());
 			return "Error while retrieving log from Apple server";
 		}
 	}
