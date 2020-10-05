@@ -8,16 +8,21 @@
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 
+import org.eclipse.cbi.common.util.Zips;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +34,7 @@ import net.jodah.failsafe.RetryPolicy;
 public abstract class Stapler {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(Notarizer.class);
+	private static final String DOT_APP_GLOB_PATTERN = "glob:**.{app,plugin,framework}";
 
 	abstract Path fileToStaple();
 	
@@ -39,23 +45,59 @@ public abstract class Stapler {
 	}
 	
 	public StaplerResult staple() throws ExecutionException {
+		if ("zip".equals(com.google.common.io.Files.getFileExtension(fileToStaple().toString()))) {
+			return stapleZipFile(fileToStaple());
+		} else {
+			return stapleFile(fileToStaple());
+		}
+	}
+
+	private StaplerResult stapleZipFile(Path zipFile) throws ExecutionException {
+		try {
+			Path unzipFolder = zipFile.getParent().resolve(zipFile.getFileName().toString() + "-unzip");
+			Zips.unpackZip(zipFile, unzipFolder);
+			try (Stream<Path> pathStream = Files.list(unzipFolder)) {
+				final PathMatcher dotAppPattern = unzipFolder.getFileSystem().getPathMatcher(DOT_APP_GLOB_PATTERN);
+				List<StaplerResult> results = pathStream
+					.filter(p -> Files.isDirectory(p) && dotAppPattern.matches(p))
+					.map(p -> {
+						try {
+							return stapleFile(p);
+						} catch (ExecutionException e) {
+							LOGGER.error("Error while stapling a file from a zip", e);
+							return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR, e.getMessage());
+						}
+					})
+					.collect(Collectors.toList());
+				if (Zips.packZip(unzipFolder, zipFile, false) <= 0) {
+					throw new IOException("Something wrong happened when trying to zip it back after stapling zip content");
+				}
+				return StaplerResult.from(results);
+			}
+		} catch (IOException e) {
+			LOGGER.error("Error while stapling notarization ticket to zip file " + zipFile, e.getMessage());
+			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded zip file", e);
+		}
+	}
+
+	private StaplerResult stapleFile(Path file) throws ExecutionException {
 		List<String> cmd = ImmutableList.<String>builder().add("xcrun", "stapler")
-				.add("staple", fileToStaple().toString())
+				.add("staple", file.toString())
 				.build();
 		
 		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
 
 		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, staplingTimeout())) {
 			if (nativeProcessResult.exitValue() == 0) {
-				return new AutoValue_StaplerResult(StaplerResult.Status.SUCCESS, "Notarization ticket has been stapled to the uploaded file successfully");
+				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.SUCCESS, "Notarization ticket has been stapled to the uploaded file successfully");
 			} else {
-				return new AutoValue_StaplerResult(StaplerResult.Status.ERROR, "Error happened while stapling notarization ticket to the uploaded file");
+				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR, "Error happened while stapling notarization ticket to the uploaded file");
 			}
 		} catch (IOException e) {
-			LOGGER.error("Error while stapling notarization ticket to file " + fileToStaple(), e.getMessage());
+			LOGGER.error("Error while stapling notarization ticket to file " + file, e.getMessage());
 			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded file", e);
 		} catch (TimeoutException e) {
-			LOGGER.error("Timeout while stapling notarization ticket to file " + fileToStaple(), e.getMessage());
+			LOGGER.error("Timeout while stapling notarization ticket to file " + file, e.getMessage());
 			throw new ExecutionException("Timeout while stapling notarization ticket to the uploaded file", e);
 		}
 	}

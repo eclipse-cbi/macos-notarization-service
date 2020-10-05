@@ -28,6 +28,7 @@ import org.xml.sax.SAXException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.FailsafeException;
 import net.jodah.failsafe.RetryPolicy;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
@@ -161,21 +162,26 @@ public abstract class NotarizationInfo {
 	}
 
 	private String extractLogFromServer(Map<?, ?> notarizationInfo) {
-		Object logFileUrl = notarizationInfo.get("LogFileURL");
-		if (logFileUrl instanceof String) {
-			return logFromServer((String) logFileUrl);
+		Object logFileUrlStr = notarizationInfo.get("LogFileURL");
+		if (logFileUrlStr instanceof String) {
+			HttpUrl logfileUrl = HttpUrl.parse((String)logFileUrlStr);
+			if (logfileUrl != null) {
+				return logFromServer(logfileUrl);
+			} else {
+				return "LogFileURL from plist file is invalid '"+logFileUrlStr+"'";
+			}
 		} else {
 			return "Unable to find LogFileURL in parsed plist file";
 		}
 	}
 
-	private String logFromServer(String logFileUrl) {
+	private String logFromServer(HttpUrl logFileUrl) {
 		try {
 			RetryPolicy<String> retryPolicy = new RetryPolicy<String>().withDelay(Duration.ofSeconds(10));
 			return Failsafe.with(retryPolicy).get(() -> 
 			httpClient().newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string());
 		} catch (FailsafeException e) {
-			LOGGER.error("Error while retrieving log from Apple server (logFileURL="+logFileUrl+")", e.getCause());
+			LOGGER.error("Error while retrieving log from Apple server (logFileURL= "+logFileUrl+" )", e.getCause());
 			return "Error while retrieving log from Apple server";
 		}
 	}
