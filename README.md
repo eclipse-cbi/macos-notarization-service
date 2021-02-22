@@ -1,6 +1,8 @@
 # macOS Notarization Service
 
-[![Build Status](https://ci.eclipse.org/cbi/buildStatus/icon?job=macos-notarization-service%2Fmaster)](https://ci.eclipse.org/cbi/job/macos-notarization-service/job/master/) [![GitHub license](https://img.shields.io/github/license/eclipse-cbi/macos-notarization-service.svg)](https://github.com/eclipse-cbi/macos-notarization-service/blob/master/LICENSE)
+[![Build Status](https://ci.eclipse.org/cbi/buildStatus/icon?job=macos-notarization-service%2Fmain)](https://ci.eclipse.org/cbi/job/macos-notarization-service/job/main/) 
+[![GitHub release](https://img.shields.io/github/release/eclipse-cbi/macos-notarization-service.svg?label=release)](https://github.com/eclipse-cbi/macos-notarization-service.svg/releases/latest)
+[![GitHub license](https://img.shields.io/github/license/eclipse-cbi/macos-notarization-service.svg)](https://github.com/eclipse-cbi/macos-notarization-service/blob/master/LICENSE)
 
 This is a web service that runs on macOS and offers a REST API to notarize signed application bundles or signed DMG. You can read more about notarization on the [Apple developer website](https://developer.apple.com/documentation/security/notarizing_your_app_before_distribution).
 
