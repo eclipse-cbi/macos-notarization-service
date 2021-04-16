@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.auto.value.AutoValue;
 
@@ -35,8 +36,9 @@ public class NativeProcess {
 		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "")
 		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "");
 		
-		Path out = Files.createTempFile(arg0.replaceAll(" ", "-") + "-", ".stdout");
-		Path err = Files.createTempFile(arg0.replaceAll(" ", "-") + "-", ".stderr");
+		String safePrefix = arg0.replaceAll("[ /]", "-").replaceAll("-+", "-") + "-";
+		Path out = Files.createTempFile(safePrefix, ".stdout");
+		Path err = Files.createTempFile(safePrefix, ".stderr");
 		
 		processBuilder.redirectOutput(out.toFile()).redirectError(err.toFile());
 
@@ -86,8 +88,8 @@ public class NativeProcess {
 	}
 
 	private static String stdioContent(Path stdio) {
-		try {
-			return Files.lines(stdio).collect(Collectors.joining("\n"));
+		try (Stream<String> lineStream = Files.lines(stdio)) {
+			return lineStream.collect(Collectors.joining("\n"));
 		} catch (IOException e) {
 			LOGGER.warn("Error while collecting content of '" + stdio + "'", e);
 			return e.getMessage();
