@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -29,10 +30,13 @@ public class NativeProcess {
 	private static final int DESTROY_GRACETIME_MILLIS = 5000;
 
 	public static Result startAndWait(ProcessBuilder processBuilder, Duration timeout) throws TimeoutException, IOException {
-		String arg0 = processBuilder.command().iterator().next();
+		Iterator<String> commandIterator = processBuilder.command().iterator();
+		String arg0 = (commandIterator.hasNext() ? commandIterator.next() : "" )
+		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "")
+		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "");
 		
-		Path out = Files.createTempFile(arg0 + "-", ".stdout");
-		Path err = Files.createTempFile(arg0 + "-", ".stderr");
+		Path out = Files.createTempFile(arg0.replaceAll(" ", "-") + "-", ".stdout");
+		Path err = Files.createTempFile(arg0.replaceAll(" ", "-") + "-", ".stderr");
 		
 		processBuilder.redirectOutput(out.toFile()).redirectError(err.toFile());
 
@@ -47,12 +51,8 @@ public class NativeProcess {
 		} catch (InterruptedException e) { // we've been interrupted
 			LOGGER.error("Thread '" + Thread.currentThread().getName()
 				+ "' has been interrupted while waiting for the process '" + arg0 + "' to complete.", e);
-
-			try {
-				destroy(p, arg0, out, err);
-			} catch (@SuppressWarnings("unused") InterruptedException e1) { // we've been interrupted, again (!)
-				// we will restore the interrupted status soon.
-			}
+			
+			destroy(p, arg0, out, err);
 
 			// Restore the interrupted status
 			Thread.currentThread().interrupt();
@@ -62,15 +62,26 @@ public class NativeProcess {
 		return result.log();
 	}
 
-	private static void destroy(Process p, String arg0, Path out, Path err) throws InterruptedException {
+	private static void destroy(Process p, String arg0, Path out, Path err) {
 		p.destroy();
-		if (!p.waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
-			if (!p.destroyForcibly().waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
-				LOGGER.error(
-					"Process '" + arg0 + "' did not stop even after being forcibly destroyed. \n" 
-							+ "Current stdout:\n" + stdioContent(out) + "\n"
-							+ "Current stderr:\n" + stdioContent(err)+"\n");
+		try {
+			if (!p.waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
+				if (!p.destroyForcibly().waitFor(DESTROY_GRACETIME_MILLIS, TimeUnit.MILLISECONDS)) {
+					LOGGER.error(
+						"Process '" + arg0 + "' did not stop even after being forcibly destroyed. \n" 
+								+ "Current stdout:\n" + stdioContent(out) + "\n"
+								+ "Current stderr:\n" + stdioContent(err)+"\n");
+				}
 			}
+		} catch (InterruptedException e) {
+			LOGGER.error("Thread '" + Thread.currentThread().getName()
+				+ "' has been interrupted while waiting for the process '" + arg0 + "' to be destroyed.", e);
+
+			// Restore the interrupted status
+			Thread.currentThread().interrupt();
+		} finally {
+			deleteIfExists(out);
+			deleteIfExists(err);
 		}
 	}
 
@@ -80,6 +91,16 @@ public class NativeProcess {
 		} catch (IOException e) {
 			LOGGER.warn("Error while collecting content of '" + stdio + "'", e);
 			return e.getMessage();
+		}
+	}
+
+	static void deleteIfExists(Path path) {
+		if (path != null) {
+			try {
+				Files.deleteIfExists(path);
+			} catch (IOException e) {
+				LOGGER.warn("Error while removing temporary file '" + path + "'", e);
+			}
 		}
 	}
 
@@ -134,16 +155,6 @@ public class NativeProcess {
 		public void close() {
 			deleteIfExists(stdout());
 			deleteIfExists(stderr());
-		}
-
-		private static void deleteIfExists(Path path) {
-			if (path != null) {
-				try {
-					Files.deleteIfExists(path);
-				} catch (IOException e) {
-					LOGGER.warn("Error while removing temporary file '" + path + "'", e);
-				}
-			}
 		}
 	}
 }

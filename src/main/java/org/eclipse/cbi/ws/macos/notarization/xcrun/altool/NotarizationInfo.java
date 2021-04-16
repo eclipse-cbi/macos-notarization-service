@@ -7,15 +7,20 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +43,7 @@ public abstract class NotarizationInfo {
 	private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationInfo.class);
+	private static final String TMPDIR = "TMPDIR";
 
 	abstract String appleIDUsername();
 
@@ -49,7 +55,7 @@ public abstract class NotarizationInfo {
 	
 	abstract OkHttpClient httpClient();
 	
-	public NotarizationInfoResult retrieveInfo() throws ExecutionException {
+	public NotarizationInfoResult retrieveInfo() throws ExecutionException, IOException {
 		List<String> cmd = ImmutableList.<String>builder().add("xcrun", "altool")
 				.add("--notarization-info", appleRequestUUID().toString())
 				.add("--output-format", "xml")
@@ -57,8 +63,11 @@ public abstract class NotarizationInfo {
 				.add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
 				.build();
 
+		Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-info-");
+
 		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
 		processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword());
+		processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
 
 		NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
 		try(NativeProcess.Result result = NativeProcess.startAndWait(processBuilder, pollingTimeout())) {
@@ -69,6 +78,13 @@ public abstract class NotarizationInfo {
 		} catch (TimeoutException e) {
 			LOGGER.error("Timeout while retrieving notarization info of request '" + appleRequestUUID() + "'", e);
 			throw new ExecutionException("Timeout while retrieving notarization info", e);
+		} finally {
+			LOGGER.trace("Deleting xcrun-notarization-info temporary folder " + xcrunTempFolder);
+			try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
+				filesToDelete.forEach(File::delete);
+			} catch (IOException e) {
+				LOGGER.warn("IOException happened during deletion of xcrun-notarization-info temporary folder " + xcrunTempFolder, e);
+			}
 		}
 		NotarizationInfoResult result = resultBuilder.build();
 		LOGGER.trace("Notarization info retriever result:\n" + result.toString());

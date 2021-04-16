@@ -68,7 +68,7 @@ public abstract class Notarizer {
 				.add("--primary-bundle-id", primaryBundleId())
 				.add("--file", fileToNotarize().toString()).build();
 
-		Path xcrunTempFolder = Files.createTempDirectory(fileToNotarize().getParent(), com.google.common.io.Files.getNameWithoutExtension(fileToNotarize().toString())+ "-xcrun-");
+		Path xcrunTempFolder = Files.createTempDirectory(fileToNotarize().getParent(), com.google.common.io.Files.getNameWithoutExtension(fileToNotarize().toString())+ "-xcrun-notarize-app-");
 		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
 		processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword());
 		processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
@@ -85,9 +85,11 @@ public abstract class Notarizer {
 			throw new ExecutionException("IOException happened during notarization upload", e);
 		} finally {
 			if (xcrunTempFolder != null && Files.exists(xcrunTempFolder)) {
-				LOGGER.debug("Deleting xcrun temporary folder " + xcrunTempFolder);
+				LOGGER.trace("Deleting xcrun-notarize-app temporary folder " + xcrunTempFolder);
 				try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
 					filesToDelete.forEach(File::delete);
+				} catch (IOException e) {
+					LOGGER.warn("IOException happened during deletion of xcrun-notarize-app temporary folder " + xcrunTempFolder, e);
 				}
 			}
 		}

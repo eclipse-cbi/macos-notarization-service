@@ -7,12 +7,14 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +37,7 @@ public abstract class Stapler {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(Notarizer.class);
 	private static final String DOT_APP_GLOB_PATTERN = "glob:**.{app,plugin,framework}";
+	private static final String TMPDIR = "TMPDIR";
 
 	abstract Path fileToStaple();
 	
@@ -44,7 +47,7 @@ public abstract class Stapler {
 		return new AutoValue_Stapler.Builder();
 	}
 	
-	public StaplerResult staple() throws ExecutionException {
+	public StaplerResult staple() throws ExecutionException, IOException {
 		if ("zip".equals(com.google.common.io.Files.getFileExtension(fileToStaple().toString()))) {
 			return stapleZipFile(fileToStaple());
 		} else {
@@ -63,7 +66,7 @@ public abstract class Stapler {
 					.map(p -> {
 						try {
 							return stapleFile(p);
-						} catch (ExecutionException e) {
+						} catch (ExecutionException | IOException e) {
 							LOGGER.error("Error while stapling a file from a zip", e);
 							return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR, e.getMessage());
 						}
@@ -80,12 +83,15 @@ public abstract class Stapler {
 		}
 	}
 
-	private StaplerResult stapleFile(Path file) throws ExecutionException {
+	private StaplerResult stapleFile(Path file) throws ExecutionException, IOException {
+		Path xcrunTempFolder = Files.createTempDirectory("-xcrun-stapler-");
+
 		List<String> cmd = ImmutableList.<String>builder().add("xcrun", "stapler")
 				.add("staple", file.toString())
 				.build();
 		
 		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
+		processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
 
 		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, staplingTimeout())) {
 			if (nativeProcessResult.exitValue() == 0) {
@@ -99,6 +105,13 @@ public abstract class Stapler {
 		} catch (TimeoutException e) {
 			LOGGER.error("Timeout while stapling notarization ticket to file " + file, e.getMessage());
 			throw new ExecutionException("Timeout while stapling notarization ticket to the uploaded file", e);
+		} finally {
+			LOGGER.trace("Deleting xcrun-stapler temporary folder " + xcrunTempFolder);
+			try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
+				filesToDelete.forEach(File::delete);
+			} catch (IOException e) {
+				LOGGER.warn("IOException happened during deletion of xcrun-stapler temporary folder " + xcrunTempFolder, e);
+			}
 		}
 	}
 	
