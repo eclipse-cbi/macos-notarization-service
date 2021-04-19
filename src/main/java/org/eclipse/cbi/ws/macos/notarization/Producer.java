@@ -22,7 +22,6 @@ import com.squareup.moshi.JsonReader;
 import com.squareup.moshi.JsonWriter;
 import com.squareup.moshi.Moshi;
 
-import org.eclipse.cbi.ws.macos.notarization.request.JsonAdapterFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,7 @@ public class Producer {
 
 	@Produces
 	Moshi produceMoshi() {
-		return new Moshi.Builder().add(JsonAdapterFactory.create())
+		return new Moshi.Builder()
 		.add(UUID.class, new JsonAdapter<UUID>() {
 			public UUID fromJson(JsonReader reader) throws IOException {
 				return UUID.fromString(reader.nextString());

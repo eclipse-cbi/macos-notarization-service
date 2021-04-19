@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.inject.Inject;
-import javax.servlet.ServletException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -139,7 +138,7 @@ public class NotarizationService {
 	@javax.ws.rs.Path("notarize")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response notarize(MultipartFormDataInput input) throws IOException, ServletException {
+	public Response notarize(MultipartFormDataInput input) throws IOException {
 		try (MultipartFormDataInputWrapper.WithMoshi formData = new MultipartFormDataInputWrapper.WithMoshi(input, moshi)) {
 			Optional<NotarizationRequestOptions> optionsFromEquest = formData.partJsonBodyAs("options", NotarizationRequestOptions.class);
 			Optional<InputStream> fileFromRequest = formData.partBodyAs("file", InputStream.class);

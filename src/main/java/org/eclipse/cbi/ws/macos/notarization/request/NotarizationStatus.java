@@ -10,9 +10,9 @@ package org.eclipse.cbi.ws.macos.notarization.request;
 import javax.annotation.Nullable;
 
 import com.google.auto.value.AutoValue;
-import com.squareup.moshi.JsonAdapter;
-import com.squareup.moshi.Moshi;
+import com.squareup.moshi.JsonClass;
 
+@JsonClass(generateAdapter = true, generator = "avm")
 @AutoValue
 public abstract class NotarizationStatus {
 	public enum State { COMPLETE, IN_PROGRESS, ERROR };
@@ -45,7 +45,4 @@ public abstract class NotarizationStatus {
 		abstract NotarizationStatus build();
 	}
 
-	static JsonAdapter<NotarizationStatus> jsonAdapter(Moshi moshi) {
-		return new AutoValue_NotarizationStatus.MoshiJsonAdapter(moshi);
-	}
 }
