@@ -121,18 +121,14 @@ public abstract class Notarizer {
 				} else {
 					throw new IllegalStateException("Cannot find the Apple request ID from response " + plist.toString());
 				}
-			} else if (nativeProcessResult.exitValue() == 176) { // 176 seems to mean remote error
-				analyzeExitValue176(plist, resultBuilder);
 			} else {
-				Optional<String> productErrors = plist.messageFromFirstProductError();
-				if (productErrors.isPresent()) {
-					resultBuilder
-					.status(NotarizerResult.Status.UPLOAD_FAILED)
-					.message("Failed to notarize the requested file. Reason: " + productErrors.get());
+				Optional<String> rawErrorMessage = plist.messageFromFirstProductError();
+				if (rawErrorMessage.isPresent()) {
+					analyzeErrorMessage(rawErrorMessage.get(), resultBuilder);
 				} else {
 					resultBuilder
 					.status(NotarizerResult.Status.UPLOAD_FAILED)
-					.message("Failed to notarize the requested file. Reason: xcrun altool exit value was " + nativeProcessResult.exitValue());
+					.message("Failed to notarize the requested file. Reason: xcrun altool exit value was " + nativeProcessResult.exitValue() + " with no parsable error message. See server log for more details.");
 				}
 			}
 		} catch (IOException | SAXException e) {
@@ -142,35 +138,37 @@ public abstract class Notarizer {
 		return resultBuilder.build();
 	}
 
-	private void analyzeExitValue176(PListDict plist, NotarizerResult.Builder resultBuilder) {
-		Optional<String> rawErrorMessage = plist.messageFromFirstProductError();
-		if (rawErrorMessage.isPresent()) {
-			String errorMessage = rawErrorMessage.get();
-			if (errorMessage.contains("ITMS-4302")) { // ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"
-				resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED);
-				Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(errorMessage);
-				if (matcher.matches()) {
-					resultBuilder.message(matcher.group(1));
-				} else {
-					resultBuilder.message("The software asset has an invalid primary bundle identifier");
-				}
-			} else if (errorMessage.contains("ITMS-90732")) { // ERROR ITMS-90732: "The software asset has already been uploaded. The upload ID is {}"
-				Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
-				if (appleRequestID.isPresent()) {
-					resultBuilder.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-					.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
-					.appleRequestUUID(appleRequestID.get());
-				} else {
-					throw new IllegalStateException("Cannot parse the Apple request ID from error message while error is ITMS-90732");
-				}
-			} else {
-				resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
-				.message("Failed to notarize the requested file. Reason: " + errorMessage);
-			}
+	private void analyzeErrorMessage(String errorMessage, NotarizerResult.Builder resultBuilder) {
+		if (errorMessage.contains("ITMS-4302")) {
+			// ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"
+			errorITMS4302(errorMessage, resultBuilder);
+		} else if (errorMessage.contains("ITMS-90732")) { 
+			// ERROR ITMS-90732: "The software asset has already been uploaded. The upload ID is {}"
+			errorITMS90732(errorMessage, resultBuilder);
 		} else {
-			resultBuilder
-					.status(NotarizerResult.Status.UPLOAD_FAILED)
-					.message("Failed to notarize the requested file. Reason: xcrun altool exit value was 176 with no parsable error message. See server log for more details.");
+			resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
+			.message("Failed to notarize the requested file. Reason: " + errorMessage);
+		}
+	}
+
+	private void errorITMS90732(String errorMessage, NotarizerResult.Builder resultBuilder) {
+		Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
+		if (appleRequestID.isPresent()) {
+			resultBuilder.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+			.message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
+			.appleRequestUUID(appleRequestID.get());
+		} else {
+			throw new IllegalStateException("Cannot parse the Apple request ID from error message while error is ITMS-90732");
+		}
+	}
+
+	private void errorITMS4302(String errorMessage, NotarizerResult.Builder resultBuilder) {
+		resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED);
+		Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(errorMessage);
+		if (matcher.matches()) {
+			resultBuilder.message(matcher.group(1));
+		} else {
+			resultBuilder.message("The software asset has an invalid primary bundle identifier");
 		}
 	}
 
