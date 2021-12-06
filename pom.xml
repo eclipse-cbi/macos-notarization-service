@@ -7,13 +7,15 @@
 	<properties>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
+		<project.build.outputTimestamp>32</project.build.outputTimestamp>
+		<maven.compiler.source>11</maven.compiler.source>
+		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.parameters>true</maven.compiler.parameters>
 
-		<quarkus-plugin.version>1.13.7.Final</quarkus-plugin.version>
+		<quarkus-plugin.version>2.5.1.Final</quarkus-plugin.version>
 		<quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
 		<quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-		<quarkus.platform.version>1.13.7.Final</quarkus.platform.version>
+		<quarkus.platform.version>2.5.1.Final</quarkus.platform.version>
 
 		<surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
 		<compiler-plugin.version>3.8.1</compiler-plugin.version>
@@ -151,8 +153,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.1</version>
+				<version>${compiler-plugin.version}</version>
 				<configuration>
+					<parameters>${maven.compiler.parameters}</parameters>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>com.ryanharter.auto.value</groupId>
@@ -179,6 +182,12 @@
 				</executions>
 			</plugin>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.2.0</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>${surefire-plugin.version}</version>
 				<configuration>
@@ -201,7 +210,7 @@
 						<configuration>
 							<rules>
 								<requireMavenVersion>
-									<version>3.6.3</version>
+									<version>3.8.4</version>
 								</requireMavenVersion>
 							</rules>
 						</configuration>
@@ -243,5 +252,18 @@
 				</plugins>
 			</build>
 		</profile>
+		<profile>
+      <id>ide</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>RUN_IN_IDE</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <directory>${project.basedir}/targetide</directory>
+      </build>
+    </profile>
 	</profiles>
 </project>
