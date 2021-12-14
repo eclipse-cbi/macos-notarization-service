@@ -38,6 +38,12 @@
 		</repository>
 	</repositories>
 
+	<scm>
+    <connection>scm:git:https://github.com/eclipse-cbi/macos-notarization-service</connection>
+    <developerConnection>scm:git:ssh://github.com/eclipse-cbi/macos-notarization-service</developerConnection>
+    <url>https://github.com/eclipse-cbi/macos-notarization-service</url>
+  </scm>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -163,7 +169,6 @@
 							<version>${com.ryanharter.auto.value.auto-value-moshi.version}</version>
 						</path>
 					</annotationProcessorPaths>
-
 				</configuration>
 			</plugin>
 			<plugin>
@@ -185,6 +190,21 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>3.2.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-artifact-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>buildinfo</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<reproducible>true</reproducible>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
