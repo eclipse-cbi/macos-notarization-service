@@ -41,7 +41,7 @@ import okhttp3.Request;
 public abstract class NotarizationInfo {
 
 	private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
-	
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationInfo.class);
 	private static final String TMPDIR = "TMPDIR";
 
@@ -50,11 +50,11 @@ public abstract class NotarizationInfo {
 	abstract String appleIDPassword();
 
 	abstract String appleRequestUUID();
-	
+
 	abstract Duration pollingTimeout();
-	
+
 	abstract OkHttpClient httpClient();
-	
+
 	public NotarizationInfoResult retrieveInfo() throws ExecutionException, IOException {
 		List<String> cmd = ImmutableList.<String>builder().add("xcrun", "altool")
 				.add("--notarization-info", appleRequestUUID().toString())
@@ -109,7 +109,7 @@ public abstract class NotarizationInfo {
 				.onFailure(l -> LOGGER.error("Fail to fetch notarization info retrieval attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
 				.get(this::retrieveInfo);
 	}
-	
+
 	private void analyseResults(NativeProcess.Result result, NotarizationInfoResult.Builder resultBuilder) throws ExecutionException {
 		try {
 			PListDict plist = PListDict.fromXML(result.stdoutAsStream());
@@ -131,6 +131,10 @@ public abstract class NotarizationInfo {
 						case 1519: // Could not find the RequestUUID.
 							resultBuilder.message("Error while retrieving notarization info from Apple service. Remote service could not find the RequestUUID");
 							break;
+						case -18000: // ERROR ITMS-90732: "The software asset has already been uploaded.
+							resultBuilder
+								.status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
+								.message("The software asset has already been uploaded. Notarization in progress");
 						default:
 							resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+result.exitValue()+").");
 							break;
@@ -147,7 +151,7 @@ public abstract class NotarizationInfo {
 		} catch (IOException | SAXException e) {
 			LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID() + "'", e);
 			throw new ExecutionException("Failed to retrieve notarization info.", e);
-		} 
+		}
 	}
 
 	private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo, NotarizationInfoResult.Builder resultBuilder) {
@@ -194,7 +198,7 @@ public abstract class NotarizationInfo {
 	private String logFromServer(HttpUrl logFileUrl) {
 		try {
 			RetryPolicy<String> retryPolicy = new RetryPolicy<String>().withDelay(Duration.ofSeconds(10));
-			return Failsafe.with(retryPolicy).get(() -> 
+			return Failsafe.with(retryPolicy).get(() ->
 			httpClient().newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string());
 		} catch (FailsafeException e) {
 			LOGGER.error("Error while retrieving log from Apple server (logFileURL= "+logFileUrl+" )", e.getCause());
@@ -213,11 +217,11 @@ public abstract class NotarizationInfo {
 		public abstract Builder appleIDPassword(String appleIDPassword);
 
 		public abstract Builder appleRequestUUID(String appleRequestUUID);
-		
+
 		public abstract Builder pollingTimeout(Duration pollingTimeout);
-		
+
 		public abstract Builder httpClient(OkHttpClient httpClient);
-		
+
 		public abstract NotarizationInfo build();
 	}
 }
