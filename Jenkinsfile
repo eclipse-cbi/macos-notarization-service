@@ -1,7 +1,11 @@
 pipeline {
- 
-   agent any
- 
+
+  agent any
+
+  tools {
+    jdk 'temurin-jdk17-latest'
+  }
+
   options {
     buildDiscarder(logRotator(numToKeepStr: '10'))
   }
