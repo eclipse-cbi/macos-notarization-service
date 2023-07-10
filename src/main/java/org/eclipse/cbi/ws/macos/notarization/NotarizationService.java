@@ -19,15 +19,16 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.ResponseBuilder;
 
 import com.squareup.moshi.Moshi;
 
@@ -49,7 +50,7 @@ import okhttp3.OkHttpClient;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@javax.ws.rs.Path("/")
+@jakarta.ws.rs.Path("/")
 public class NotarizationService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationService.class);
@@ -64,6 +65,7 @@ public class NotarizationService {
 	OkHttpClient httpClient;
 
 	@Inject
+	@Named("macos-notarization-service-pool")
 	ScheduledExecutorService executor;
 
 	@Inject
@@ -135,7 +137,7 @@ public class NotarizationService {
 	Duration staplingMaxBackOffDelay;
 
 	@POST
-	@javax.ws.rs.Path("notarize")
+	@jakarta.ws.rs.Path("notarize")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response notarize(MultipartFormDataInput input) throws IOException {
@@ -204,7 +206,7 @@ public class NotarizationService {
 	}
 
 	@GET
-	@javax.ws.rs.Path("{uuid}/status")
+	@jakarta.ws.rs.Path("{uuid}/status")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response status(@PathParam(value = "uuid") String uuid) throws InterruptedException, ExecutionException {
 		try {
@@ -221,7 +223,7 @@ public class NotarizationService {
 	}
 
 	@GET
-	@javax.ws.rs.Path("{uuid}/download")
+	@jakarta.ws.rs.Path("{uuid}/download")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response download(@PathParam(value = "uuid") String uuid) throws InterruptedException, ExecutionException, IOException {
 		UUID fromString = UUID.fromString(uuid);

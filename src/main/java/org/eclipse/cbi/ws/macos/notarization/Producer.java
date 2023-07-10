@@ -13,8 +13,9 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.squareup.moshi.JsonAdapter;
@@ -33,6 +34,7 @@ public class Producer {
 	private static final Logger LOGGER = LoggerFactory.getLogger("macos-notarization-service-threadpool-handler");
 
 	@Produces
+	@Named("macos-notarization-service-pool")
 	ScheduledExecutorService produceExecutor() {
 		return Executors.newScheduledThreadPool(32,
 			new ThreadFactoryBuilder()
@@ -56,7 +58,7 @@ public class Producer {
 		})
 		.build();
 	}
-	
+
 	@Produces
 	OkHttpClient produceOkHttpClient() {
 		return new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
