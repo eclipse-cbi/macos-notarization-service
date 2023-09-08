@@ -32,11 +32,14 @@ public class NativeProcess {
 
 	public static Result startAndWait(ProcessBuilder processBuilder, Duration timeout) throws TimeoutException, IOException {
 		Iterator<String> commandIterator = processBuilder.command().iterator();
-		String arg0 = (commandIterator.hasNext() ? commandIterator.next() : "" )
-		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "")
-		+ (commandIterator.hasNext() ? " " + commandIterator.next() : "");
+
+		String arg0 =
+			(commandIterator.hasNext() ? commandIterator.next() : "" ) +
+			(commandIterator.hasNext() ? " " + commandIterator.next() : "") +
+			(commandIterator.hasNext() ? " " + commandIterator.next() : "");
 		
 		String safePrefix = arg0.replaceAll("[ /]", "-").replaceAll("-+", "-") + "-";
+
 		Path out = Files.createTempFile(safePrefix, ".stdout");
 		Path err = Files.createTempFile(safePrefix, ".stderr");
 		
@@ -60,8 +63,9 @@ public class NativeProcess {
 			Thread.currentThread().interrupt();
 		}
 
-		AutoValue_NativeProcess_Result result = new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err);
-		return result.log();
+		try (AutoValue_NativeProcess_Result result = new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err)) {
+			return result.log();
+		}
 	}
 
 	private static void destroy(Process p, String arg0, Path out, Path err) {

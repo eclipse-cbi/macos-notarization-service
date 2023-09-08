@@ -5,7 +5,7 @@ export NOTARIZATION_APPLEID_PASSWORD="appleid_password"
 
 JAR_FILE=$(find . -name "quarkus-run.jar" | sort | tail -n 1)
 
-"$(/usr/libexec/java_home -v 1.8)/bin/java" -Dquarkus.http.port=8383 \
+"$(/usr/libexec/java_home -v 17)/bin/java" -Dquarkus.http.port=8383 \
 	-Dquarkus.log.category.\"org.eclipse.cbi\".level=INFO \
 	-Dquarkus.http.access-log.enabled=true \
 	-Dquarkus.http.access-log.pattern=combined \

@@ -30,38 +30,35 @@ import okhttp3.OkHttpClient;
 
 @ApplicationScoped
 public class Producer {
-
 	private static final Logger LOGGER = LoggerFactory.getLogger("macos-notarization-service-threadpool-handler");
 
 	@Produces
 	@Named("macos-notarization-service-pool")
 	ScheduledExecutorService produceExecutor() {
-		return Executors.newScheduledThreadPool(32,
-			new ThreadFactoryBuilder()
+		return Executors.newScheduledThreadPool(32, new ThreadFactoryBuilder()
 				.setNameFormat("macos-notarization-service-pool-thread-%d")
-				.setUncaughtExceptionHandler((t, e) -> {
-					LOGGER.error("Uncaught "+e.getClass().getName()+" in thread " + t.getName(), e);
-				}).build());
+				.setUncaughtExceptionHandler((t, e) -> LOGGER.error("Uncaught " + e.getClass().getName() + " in thread " + t.getName(), e))
+				.build());
 	}
 
 	@Produces
 	Moshi produceMoshi() {
 		return new Moshi.Builder()
-		.add(UUID.class, new JsonAdapter<UUID>() {
-			public UUID fromJson(JsonReader reader) throws IOException {
-				return UUID.fromString(reader.nextString());
-			};
+				.add(UUID.class,
+					new JsonAdapter<UUID>() {
+						public UUID fromJson(JsonReader reader) throws IOException {
+							return UUID.fromString(reader.nextString());
+						}
 
-			public void toJson(JsonWriter writer, UUID value) throws IOException {
-				writer.value(value.toString());
-			};
-		})
-		.build();
+						public void toJson(JsonWriter writer, UUID value) throws IOException {
+							writer.value(value.toString());
+						}
+					})
+				.build();
 	}
 
 	@Produces
 	OkHttpClient produceOkHttpClient() {
 		return new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
 	}
-
 }
