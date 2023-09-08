@@ -37,7 +37,7 @@ public class AltoolNotarizer extends NotarizationTool {
 
 
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername, String primaryBundleId, Path fileToNotarize) {
+    protected List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
         List<String> cmd = ImmutableList.<String>builder()
             .add("xcrun", "altool")
             .add("--notarize-app")
@@ -93,17 +93,19 @@ public class AltoolNotarizer extends NotarizationTool {
             // ERROR ITMS-90732: "The software asset has already been uploaded. The upload ID is {}"
             errorITMS90732(errorMessage, resultBuilder);
         } else {
-            resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
-                    .message("Failed to notarize the requested file. Reason: " + errorMessage);
+            resultBuilder
+                .status(NotarizerResult.Status.UPLOAD_FAILED)
+                .message("Failed to notarize the requested file. Reason: " + errorMessage);
         }
     }
 
     private void errorITMS90732(String errorMessage, NotarizerResult.Builder resultBuilder) {
         Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
         if (appleRequestID.isPresent()) {
-            resultBuilder.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-                    .message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
-                    .appleRequestUUID(appleRequestID.get());
+            resultBuilder
+                .status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+                .message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
+                .appleRequestUUID(appleRequestID.get());
         } else {
             throw new IllegalStateException("Cannot parse the Apple request ID from error message while error is ITMS-90732");
         }
@@ -132,7 +134,7 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername, String appleRequestUUID) {
+    protected List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
         List<String> cmd = ImmutableList.<String>builder().add("xcrun", "altool")
             .add("--notarization-info", appleRequestUUID.toString())
             .add("--output-format", "xml")
@@ -144,11 +146,10 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected NotarizationInfoResult analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                                       String appleRequestUUID,
-                                                       OkHttpClient httpClient) throws ExecutionException {
-
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
+    protected boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
+                                        NotarizationInfoResult.Builder resultBuilder,
+                                        String appleRequestUUID,
+                                        OkHttpClient httpClient) throws ExecutionException {
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
 
@@ -169,10 +170,10 @@ public class AltoolNotarizer extends NotarizationTool {
                         case 1519: // Could not find the RequestUUID.
                             resultBuilder.message("Error while retrieving notarization info from Apple service. Remote service could not find the RequestUUID");
                             break;
-                        case -18000: // ERROR ITMS-90732: "The software asset has already been uploaded.
+                        case -18000: // ERROR ITMS-90732: "The software asset has already been uploaded."
                             resultBuilder
-                                    .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
-                                    .message("The software asset has already been uploaded. Notarization in progress");
+                                .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
+                                .message("The software asset has already been uploaded. Notarization in progress");
                         default:
                             resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+nativeProcessResult.exitValue()+").");
                             break;
@@ -190,7 +191,7 @@ public class AltoolNotarizer extends NotarizationTool {
             LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID + "'", e);
             throw new ExecutionException("Failed to retrieve notarization info.", e);
         }
-        return resultBuilder.build();
+        return false;
     }
 
     private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo,
@@ -201,17 +202,17 @@ public class AltoolNotarizer extends NotarizationTool {
             String statusStr = (String) status;
             if ("success".equalsIgnoreCase(statusStr)) {
                 resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
-                        .message("Notarization status: " + notarizationInfo.get("Status Message"))
-                        .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                    .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
+                    .message("Notarization status: " + notarizationInfo.get("Status Message"))
+                    .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
             } else if ("in progress".equalsIgnoreCase(statusStr)) {
                 resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
-                        .message("Notarization in progress");
+                    .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
+                    .message("Notarization in progress");
             } else {
                 resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-                        .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                    .status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
+                    .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
 
                 Optional<String> errorMessage = plist.messageFromFirstProductError();
                 OptionalInt errorCode = plist.firstProductErrorCode();
@@ -224,7 +225,7 @@ public class AltoolNotarizer extends NotarizationTool {
 
     private String extractLogFromServer(Map<?, ?> notarizationInfo, OkHttpClient httpClient) {
         if (httpClient == null) {
-            return "Can not retrieve log, httpClient is null";
+            return null;
         }
 
         Object logFileUrlStr = notarizationInfo.get("LogFileURL");
@@ -249,5 +250,15 @@ public class AltoolNotarizer extends NotarizationTool {
             LOGGER.error("Error while retrieving log from Apple server (logFileURL= "+logFileUrl+" )", e.getCause());
             return "Error while retrieving log from Apple server";
         }
+    }
+
+    @Override
+    protected boolean hasLogCommand() {
+        return false;
+    }
+
+    @Override
+    protected List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
+        return null;
     }
 }

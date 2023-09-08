@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>createdDate</key>
+	<string>2023-09-08T13:07:03.025Z</string>
+	<key>id</key>
+	<string>ac9a4320-49c8-453c-82a3-996d83bd20f5</string>
+	<key>message</key>
+	<string>Successfully received submission info</string>
+	<key>name</key>
+	<string>Alfred_5.1.2_2145.dmg</string>
+	<key>status</key>
+	<string>Accepted</string>
+</dict>
+</plist>

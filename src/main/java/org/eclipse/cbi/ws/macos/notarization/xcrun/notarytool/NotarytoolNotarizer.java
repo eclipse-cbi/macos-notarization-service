@@ -1,12 +1,7 @@
 package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
 
 import com.google.common.collect.ImmutableList;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.FailsafeException;
-import net.jodah.failsafe.RetryPolicy;
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
@@ -18,29 +13,22 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class NotarytoolNotarizer extends NotarizationTool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotarytoolNotarizer.class);
 
-    private static final Pattern UPLOADID_PATTERN = Pattern.compile(".*The upload ID is ([A-Za-z0-9\\\\-]*).*");
-    private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile(".*\"(.*)\".*");
-
-
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername, String primaryBundleId, Path fileToNotarize) {
+    protected List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
         List<String> cmd =
             ImmutableList.<String>builder()
                 .add("xcrun", "notarytool")
                 .add("submit")
                 .add("--output-format", "plist")
                 .add("--apple-id", appleIDUsername)
-                //.add("--team-id", appleTeamID)
+                .add("--team-id", appleIDTeamID)
                 .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
                 .add(fileToNotarize.toString()).build();
 
@@ -53,25 +41,27 @@ public class NotarytoolNotarizer extends NotarizationTool {
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
             if (nativeProcessResult.exitValue() == 0) {
-                Optional<String> requestUUID = plist.requestUUIDFromNotarizationUpload();
-                if (requestUUID.isPresent()) {
+                String requestUUID = (String) plist.get("id");
+                if (requestUUID != null) {
                     resultBuilder
-                            .status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-                            .message((String) plist.get("success-message"))
-                            .appleRequestUUID(requestUUID.get());
+                        .status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
+                        .message((String) plist.get("message"))
+                        .appleRequestUUID(requestUUID);
                 } else {
                     throw new IllegalStateException("Cannot find the Apple request ID from response " + plist);
                 }
             } else {
                 Optional<String> rawErrorMessage = plist.messageFromFirstProductError();
                 if (rawErrorMessage.isPresent()) {
-                    analyzeErrorMessage(rawErrorMessage.get(), resultBuilder);
+                    resultBuilder
+                        .status(NotarizerResult.Status.UPLOAD_FAILED)
+                        .message("Failed to notarize the requested file. Reason: " + rawErrorMessage.get());
                 } else {
                     resultBuilder
-                            .status(NotarizerResult.Status.UPLOAD_FAILED)
-                            .message("Failed to notarize the requested file. Reason: xcrun altool exit value was " +
-                                    nativeProcessResult.exitValue() +
-                                    " with no parsable error message. See server log for more details.");
+                        .status(NotarizerResult.Status.UPLOAD_FAILED)
+                        .message("Failed to notarize the requested file. Reason: xcrun notarytool exit value was " +
+                                 nativeProcessResult.exitValue() +
+                                 " with no parsable error message. See server log for more details.");
                 }
             }
         } catch (IOException | SAXException e) {
@@ -81,167 +71,87 @@ public class NotarytoolNotarizer extends NotarizationTool {
         return resultBuilder.build();
     }
 
-    private void analyzeErrorMessage(String errorMessage, NotarizerResult.Builder resultBuilder) {
-        if (errorMessage.contains("ITMS-4302")) {
-            // ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"
-            errorITMS4302(errorMessage, resultBuilder);
-        } else if (errorMessage.contains("ITMS-90732")) {
-            // ERROR ITMS-90732: "The software asset has already been uploaded. The upload ID is {}"
-            errorITMS90732(errorMessage, resultBuilder);
-        } else {
-            resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED)
-                    .message("Failed to notarize the requested file. Reason: " + errorMessage);
-        }
-    }
-
-    private void errorITMS90732(String errorMessage, NotarizerResult.Builder resultBuilder) {
-        Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
-        if (appleRequestID.isPresent()) {
-            resultBuilder.status(NotarizerResult.Status.UPLOAD_SUCCESSFUL)
-                    .message("Notarization in progress (software asset has been already previously uploaded to Apple notarization service)")
-                    .appleRequestUUID(appleRequestID.get());
-        } else {
-            throw new IllegalStateException("Cannot parse the Apple request ID from error message while error is ITMS-90732");
-        }
-    }
-
-    private void errorITMS4302(String errorMessage, NotarizerResult.Builder resultBuilder) {
-        resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED);
-        Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(errorMessage);
-        if (matcher.matches()) {
-            resultBuilder.message(matcher.group(1));
-        } else {
-            resultBuilder.message("The software asset has an invalid primary bundle identifier");
-        }
-    }
-
-    private Optional<String> parseAppleRequestID(String message) {
-        try {
-            Matcher matcher = UPLOADID_PATTERN.matcher(message);
-            if (matcher.matches()) {
-                return Optional.of(matcher.group(1));
-            }
-        } catch (IllegalStateException e) {
-            LOGGER.info("No Apple request ID in xcrun output", e);
-        }
-        return Optional.empty();
-    }
-
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername, String appleRequestUUID) {
+    protected List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
         List<String> cmd =
             ImmutableList.<String>builder().add("xcrun", "notarytool")
                 .add("info")
                 .add("--output-format", "plist")
                 .add("--apple-id", appleIDUsername)
+                .add("--team-id", appleIDTeamID)
                 .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
-                .add(appleRequestUUID.toString())
+                .add(appleRequestUUID)
                 .build();
 
         return cmd;
     }
 
     @Override
-    protected NotarizationInfoResult analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                                       String appleRequestUUID,
-                                                       OkHttpClient httpClient) throws ExecutionException {
-
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
+    protected boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
+                                        NotarizationInfoResult.Builder resultBuilder,
+                                        String appleRequestUUID,
+                                        OkHttpClient httpClient) throws ExecutionException {
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
-
             if (nativeProcessResult.exitValue() == 0) {
-                Map<?, ?> notarizationInfoList = (Map<?, ?>) plist.get("notarization-info");
-                if (notarizationInfoList != null && !notarizationInfoList.isEmpty()) {
-                    parseNotarizationInfo(plist, notarizationInfoList, resultBuilder, httpClient);
-                } else {
-                    LOGGER.error("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
-                    resultBuilder.status(NotarizationInfoResult.Status.RETRIEVAL_FAILED)
-                            .message("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
-                }
+                return parseNotarizationInfo(plist, resultBuilder);
             } else {
-                resultBuilder.status(NotarizationInfoResult.Status.RETRIEVAL_FAILED);
-                OptionalInt firstProductErrorCode = plist.firstProductErrorCode();
-                if (firstProductErrorCode.isPresent()) {
-                    switch (firstProductErrorCode.getAsInt()) {
-                        case 1519: // Could not find the RequestUUID.
-                            resultBuilder.message("Error while retrieving notarization info from Apple service. Remote service could not find the RequestUUID");
-                            break;
-                        case -18000: // ERROR ITMS-90732: "The software asset has already been uploaded.
-                            resultBuilder
-                                    .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
-                                    .message("The software asset has already been uploaded. Notarization in progress");
-                        default:
-                            resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+nativeProcessResult.exitValue()+").");
-                            break;
-                    }
-                } else {
-                    Optional<String> errorMessage = plist.messageFromFirstProductError();
-                    if (errorMessage.isPresent()) {
-                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+nativeProcessResult.exitValue()+"). Reason: " + errorMessage.get());
-                    } else {
-                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+nativeProcessResult.exitValue()+").");
-                    }
-                }
+                resultBuilder
+                    .status(NotarizationInfoResult.Status.RETRIEVAL_FAILED)
+                    .message((String) plist.get("message"));
+                return false;
             }
         } catch (IOException | SAXException e) {
             LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID + "'", e);
             throw new ExecutionException("Failed to retrieve notarization info.", e);
         }
-        return resultBuilder.build();
     }
 
-    private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo,
-                                       NotarizationInfoResult.Builder resultBuilder,
-                                       OkHttpClient httpClient) {
-        Object status = notarizationInfo.get("Status");
+    private boolean parseNotarizationInfo(PListDict plist,
+                                          NotarizationInfoResult.Builder resultBuilder) {
+        Object status = plist.get("status");
         if (status instanceof String) {
             String statusStr = (String) status;
-            if ("success".equalsIgnoreCase(statusStr)) {
+            if ("accepted".equalsIgnoreCase(statusStr)) {
                 resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
-                        .message("Notarization status: " + notarizationInfo.get("Status Message"))
-                        .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                    .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
+                    .message("Notarization status: " + plist.get("message"));
+                return true;
             } else if ("in progress".equalsIgnoreCase(statusStr)) {
                 resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
-                        .message("Notarization in progress");
+                    .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
+                    .message("Notarization in progress");
             } else {
-                resultBuilder
-                        .status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-                        .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_FAILED);
 
                 Optional<String> errorMessage = plist.messageFromFirstProductError();
                 OptionalInt errorCode = plist.firstProductErrorCode();
                 resultBuilder.message("Failed to notarize the requested file (status="+statusStr+"). Error code="+errorCode+". Reason: " + errorMessage);
+                return true;
             }
         } else {
-            throw new IllegalStateException("Cannot parse 'Status' from notarization-info");
+            throw new IllegalStateException("Cannot parse 'status'.");
         }
+
+        return false;
     }
 
-    private String extractLogFromServer(Map<?, ?> notarizationInfo, OkHttpClient httpClient) {
-        Object logFileUrlStr = notarizationInfo.get("LogFileURL");
-        if (logFileUrlStr instanceof String) {
-            HttpUrl logfileUrl = HttpUrl.parse((String)logFileUrlStr);
-            if (logfileUrl != null) {
-                return logFromServer(logfileUrl, httpClient);
-            } else {
-                return "LogFileURL from plist file is invalid '"+logFileUrlStr+"'";
-            }
-        } else {
-            return "Unable to find LogFileURL in parsed plist file";
-        }
+    @Override
+    protected boolean hasLogCommand() {
+        return true;
     }
 
-    private String logFromServer(HttpUrl logFileUrl, OkHttpClient httpClient) {
-        try {
-            RetryPolicy<String> retryPolicy = new RetryPolicy<String>().withDelay(Duration.ofSeconds(10));
-            return Failsafe.with(retryPolicy).get(() ->
-                    httpClient.newCall(new Request.Builder().url(logFileUrl).build()).execute().body().string());
-        } catch (FailsafeException e) {
-            LOGGER.error("Error while retrieving log from Apple server (logFileURL= "+logFileUrl+" )", e.getCause());
-            return "Error while retrieving log from Apple server";
-        }
+    @Override
+    protected List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
+        List<String> cmd =
+                ImmutableList.<String>builder().add("xcrun", "notarytool")
+                        .add("log")
+                        .add("--apple-id", appleIDUsername)
+                        .add("--team-id", appleIDTeamID)
+                        .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
+                        .add(appleRequestUUID)
+                        .build();
+
+        return cmd;
     }
 }
