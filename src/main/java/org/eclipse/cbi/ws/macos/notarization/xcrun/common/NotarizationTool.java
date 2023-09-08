@@ -31,11 +31,12 @@ public abstract class NotarizationTool {
 
     public NotarizerResult upload(String appleIDUsername,
                                   String appleIDPassword,
+                                  String appleIDTeamID,
                                   String primaryBundleId,
                                   Path fileToNotarize,
                                   Duration uploadTimeout) throws ExecutionException, IOException {
 
-        List<String> cmd = getUploadCommand(appleIDUsername, primaryBundleId, fileToNotarize);
+        List<String> cmd = getUploadCommand(appleIDUsername, appleIDTeamID, primaryBundleId, fileToNotarize);
 
         Path xcrunTempFolder =
                 Files.createTempDirectory(fileToNotarize.getParent(),
@@ -67,18 +68,19 @@ public abstract class NotarizationTool {
         }
     }
 
-    protected abstract List<String> getUploadCommand(String appleIDUsername, String primaryBundleId, Path fileToNotarize);
+    protected abstract List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize);
 
     protected abstract NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult,
                                                                Path fileToNotarize) throws ExecutionException;
 
     public NotarizationInfoResult retrieveInfo(String appleIDUsername,
                                                String appleIDPassword,
+                                               String appleIDTeamID,
                                                String appleRequestUUID,
                                                Duration pollingTimeout,
                                                OkHttpClient httpClient) throws ExecutionException, IOException {
 
-        List<String> cmd = getInfoCommand(appleIDUsername, appleRequestUUID);
+        List<String> cmd = getInfoCommand(appleIDUsername, appleIDTeamID, appleRequestUUID);
 
         Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-info-");
 
@@ -86,8 +88,17 @@ public abstract class NotarizationTool {
         processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword);
         processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
 
+        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
         try (NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, pollingTimeout)) {
-            NotarizationInfoResult result = analyzeInfoResult(nativeProcessResult, appleRequestUUID, httpClient);
+            boolean addLog = analyzeInfoResult(nativeProcessResult, resultBuilder, appleRequestUUID, httpClient);
+            if (addLog && hasLogCommand()) {
+                resultBuilder.notarizationLog(retrieveLog(appleIDUsername,
+                                                          appleIDPassword,
+                                                          appleIDTeamID,
+                                                          appleRequestUUID,
+                                                          pollingTimeout));
+            }
+            NotarizationInfoResult result = resultBuilder.build();
             LOGGER.trace("Notarization info retriever result:\n{}", result);
             return result;
         } catch (IOException e) {
@@ -106,9 +117,51 @@ public abstract class NotarizationTool {
         }
     }
 
-    protected abstract List<String> getInfoCommand(String appleIDUsername, String appleRequestUUID);
+    protected abstract List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID);
 
-    protected abstract NotarizationInfoResult analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                                                String appleRequestUUID,
-                                                                OkHttpClient httpClient) throws ExecutionException;
+    protected abstract boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
+                                                 NotarizationInfoResult.Builder resultBuilder,
+                                                 String appleRequestUUID,
+                                                 OkHttpClient httpClient) throws ExecutionException;
+
+    public String retrieveLog(String appleIDUsername,
+                              String appleIDPassword,
+                              String appleIDTeamID,
+                              String appleRequestUUID,
+                              Duration pollingTimeout) throws ExecutionException, IOException {
+
+        List<String> cmd = getLogCommand(appleIDUsername, appleIDTeamID, appleRequestUUID);
+
+        Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-log-");
+
+        ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
+        processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword);
+        processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
+
+        try (NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, pollingTimeout)) {
+            if (nativeProcessResult.exitValue() == 0) {
+                return new String(nativeProcessResult.stdoutAsStream().readAllBytes());
+            } else {
+                LOGGER.error("Error while retrieving notarization log of request '" + appleRequestUUID + "'");
+                throw new ExecutionException("Failed to retrieve notarization log", null);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error while retrieving notarization log of request '" + appleRequestUUID + "'", e);
+            throw new ExecutionException("Failed to retrieve notarization log", e);
+        } catch (TimeoutException e) {
+            LOGGER.error("Timeout while retrieving notarization log of request '" + appleRequestUUID + "'", e);
+            throw new ExecutionException("Timeout while retrieving notarization log", e);
+        } finally {
+            LOGGER.trace("Deleting xcrun-notarization-info temporary folder " + xcrunTempFolder);
+            try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
+                filesToDelete.forEach(File::delete);
+            } catch (IOException e) {
+                LOGGER.warn("IOException happened during deletion of xcrun-notarization-log temporary folder " + xcrunTempFolder, e);
+            }
+        }
+    }
+
+    protected abstract boolean hasLogCommand();
+
+    protected abstract List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID);
 }

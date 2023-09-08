@@ -30,6 +30,8 @@ public abstract class Notarizer {
 
 	abstract String appleIDPassword();
 
+	abstract String appleIDTeamID();
+
 	abstract Path fileToNotarize();
 
 	abstract Duration uploadTimeout();
@@ -60,7 +62,7 @@ public abstract class Notarizer {
 							String.format("Failure on notarization upload attempt #%d, cause: %s, elapsed time: %s",
 									      l.getAttemptCount(), l.getFailure().getMessage(), l.getElapsedTime()),
 							l.getFailure()))
-				.get(() -> tool().upload(appleIDUsername(), appleIDPassword(), primaryBundleId(), fileToNotarize(), uploadTimeout()));
+				.get(() -> tool().upload(appleIDUsername(), appleIDPassword(), appleIDTeamID(), primaryBundleId(), fileToNotarize(), uploadTimeout()));
 	}
 
 	@AutoValue.Builder
@@ -70,6 +72,8 @@ public abstract class Notarizer {
 		public abstract Builder appleIDUsername(String appleIDUsername);
 
 		public abstract Builder appleIDPassword(String appleIDPassword);
+
+		public abstract Builder appleIDTeamID(String appleIDTeamID);
 
 		public abstract Builder fileToNotarize(Path fileToNotarize);
 

@@ -2,6 +2,7 @@
 
 export NOTARIZATION_APPLEID_USERNAME="appleid"
 export NOTARIZATION_APPLEID_PASSWORD="appleid_password"
+export NOTARIZATION_APPLEID_TEAMID="appleid_teamid"
 
 JAR_FILE=$(find . -name "quarkus-run.jar" | sort | tail -n 1)
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>createdDate</key>
+	<string>2023-09-08T13:15:20.971Z</string>
+	<key>id</key>
+	<string>70c0e06a-a81a-4b19-b4bb-9bce92023410</string>
+	<key>message</key>
+	<string>Successfully received submission info</string>
+	<key>name</key>
+	<string>eclipse-committers-2019-12-M2-macosx-cocoa-x86_64.dmg</string>
+	<key>status</key>
+	<string>In Progress</string>
+</dict>
+</plist>

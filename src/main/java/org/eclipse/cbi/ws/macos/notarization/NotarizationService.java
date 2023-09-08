@@ -42,6 +42,7 @@ import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Notarizer;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Stapler;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool.NotarytoolNotarizer;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.slf4j.Logger;
@@ -80,6 +81,10 @@ public class NotarizationService {
 	@Inject
 	@ConfigProperty(name = "notarization.appleid.username")
 	String appleIDUsername;
+
+	@Inject
+	@ConfigProperty(name = "notarization.appleid.teamid")
+	String appleIDTeamID;
 
 	@Inject
 	@ConfigProperty(name = "notarization.upload.timeout", defaultValue = "PT60M")
@@ -179,9 +184,10 @@ public class NotarizationService {
 		    	.primaryBundleId(options.primaryBundleId())
 			 	.appleIDUsername(appleIDUsername)
 			    .appleIDPassword(appleIDPassword)
+				.appleIDTeamID(appleIDTeamID)
 			    .fileToNotarize(fileToNotarize)
 			    .uploadTimeout(uploadTimeout)
-			    .tool(new AltoolNotarizer())
+			    .tool(new NotarytoolNotarizer())
 			    .build()
 			    .uploadFailsafe(uploadMaxAttempts, uploadMinBackOffDelay, uploadMaxBackOffDelay));
 
@@ -189,9 +195,11 @@ public class NotarizationService {
 			NotarizationInfo.builder()
 				.appleIDUsername(appleIDUsername)
 				.appleIDPassword(appleIDPassword)
+				.appleIDTeamID(appleIDTeamID)
 				.appleRequestUUID(r.appleRequestUUID())
 				.httpClient(httpClient)
 				.pollingTimeout(infoPollingTimeout)
+				.tool(new NotarytoolNotarizer())
 				.build()
 				.retrieveInfoFailsafe(infoPollingMaxTotalDuration, infoPollingDelayBetweenSuccessfulAttempts,
 									  infoPollingMaxFailedAttempts, infoPollingMinBackOffDelay, infoPollingMaxBackOffDelay));

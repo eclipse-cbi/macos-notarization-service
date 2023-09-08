@@ -29,6 +29,8 @@ public abstract class NotarizationInfo {
 
 	abstract String appleIDPassword();
 
+	abstract String appleIDTeamID();
+
 	abstract String appleRequestUUID();
 
 	abstract Duration pollingTimeout();
@@ -53,7 +55,7 @@ public abstract class NotarizationInfo {
 				.onFailedAttempt(l -> LOGGER.trace("Failed to fetch notarization info because of previous error (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
 		return Failsafe.with(retryOnFailure, watchUntilCompleted)
 				.onFailure(l -> LOGGER.error("Fail to fetch notarization info retrieval attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
-				.get(() -> tool().retrieveInfo(appleIDUsername(), appleIDPassword(), appleRequestUUID(), pollingTimeout(), httpClient()));
+				.get(() -> tool().retrieveInfo(appleIDUsername(), appleIDPassword(), appleIDTeamID(), appleRequestUUID(), pollingTimeout(), httpClient()));
 	}
 
 	public static Builder builder() {
@@ -65,6 +67,8 @@ public abstract class NotarizationInfo {
 		public abstract Builder appleIDUsername(String appleIDUsername);
 
 		public abstract Builder appleIDPassword(String appleIDPassword);
+
+		public abstract Builder appleIDTeamID(String appleIDTeamID);
 
 		public abstract Builder appleRequestUUID(String appleRequestUUID);
 
