@@ -16,76 +16,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
-public class NotarytoolNotarizer implements NotarizationTool {
+public class NotarytoolNotarizer extends NotarizationTool {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotarytoolNotarizer.class);
 
     private static final Pattern UPLOADID_PATTERN = Pattern.compile(".*The upload ID is ([A-Za-z0-9\\\\-]*).*");
     private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile(".*\"(.*)\".*");
 
-    private static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(NotarytoolNotarizer.class);
-    private static final String TMPDIR = "TMPDIR";
 
     @Override
-    public NotarizerResult upload(String appleIDUsername,
-                                  String appleIDPassword,
-                                  String primaryBundleId,
-                                  Path fileToNotarize,
-                                  Duration uploadTimeout) throws ExecutionException, IOException {
-        // TODO: consider using --wait
-
+    protected List<String> getUploadCommand(String appleIDUsername, String primaryBundleId, Path fileToNotarize) {
         List<String> cmd =
             ImmutableList.<String>builder()
                 .add("xcrun", "notarytool")
                 .add("submit")
                 .add("--output-format", "plist")
                 .add("--apple-id", appleIDUsername)
+                //.add("--team-id", appleTeamID)
                 .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
                 .add(fileToNotarize.toString()).build();
 
-        Path xcrunTempFolder =
-                Files.createTempDirectory(fileToNotarize.getParent(),
-                        com.google.common.io.Files.getNameWithoutExtension(fileToNotarize.toString())+ "-xcrun-notarize-app-");
-
-        ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
-        processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword);
-        processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
-
-        try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, uploadTimeout)) {
-            NotarizerResult result = analyzeResult(nativeProcessResult, fileToNotarize);
-            LOGGER.trace("Notarization upload result:\n" + result.toString());
-            return result;
-        } catch (TimeoutException e) {
-            LOGGER.error("Timeout happened during notarization upload of file " + fileToNotarize, e);
-            throw new ExecutionException("Timeout happened during notarization upload", e);
-        } catch (IOException e) {
-            LOGGER.error("IOException happened during notarization upload of file " + fileToNotarize, e);
-            throw new ExecutionException("IOException happened during notarization upload", e);
-        } finally {
-            if (Files.exists(xcrunTempFolder)) {
-                LOGGER.trace("Deleting xcrun-notarize-app temporary folder " + xcrunTempFolder);
-                try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
-                    filesToDelete.forEach(File::delete);
-                } catch (IOException e) {
-                    LOGGER.warn("IOException happened during deletion of xcrun-notarize-app temporary folder " + xcrunTempFolder, e);
-                }
-            }
-        }
+        return cmd;
     }
 
-    private NotarizerResult analyzeResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) throws ExecutionException {
+    @Override
+    protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) throws ExecutionException {
         NotarizerResult.Builder resultBuilder = NotarizerResult.builder();
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
@@ -165,11 +128,7 @@ public class NotarytoolNotarizer implements NotarizationTool {
     }
 
     @Override
-    public NotarizationInfoResult retrieveInfo(String appleIDUsername,
-                                               String appleIDPassword,
-                                               String appleRequestUUID,
-                                               Duration pollingTimeout,
-                                               OkHttpClient httpClient) throws ExecutionException, IOException {
+    protected List<String> getInfoCommand(String appleIDUsername, String appleRequestUUID) {
         List<String> cmd =
             ImmutableList.<String>builder().add("xcrun", "notarytool")
                 .add("info")
@@ -179,42 +138,19 @@ public class NotarytoolNotarizer implements NotarizationTool {
                 .add(appleRequestUUID.toString())
                 .build();
 
-        Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-info-");
-
-        ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
-        processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword);
-        processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
-
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
-        try (NativeProcess.Result result = NativeProcess.startAndWait(processBuilder, pollingTimeout)) {
-            analyseResults(result, resultBuilder, appleRequestUUID, httpClient);
-        } catch (IOException e) {
-            LOGGER.error("Error while retrieving notarization info of request '" + appleRequestUUID + "'", e);
-            throw new ExecutionException("Failed to retrieve notarization info", e);
-        } catch (TimeoutException e) {
-            LOGGER.error("Timeout while retrieving notarization info of request '" + appleRequestUUID + "'", e);
-            throw new ExecutionException("Timeout while retrieving notarization info", e);
-        } finally {
-            LOGGER.trace("Deleting xcrun-notarization-info temporary folder " + xcrunTempFolder);
-            try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
-                filesToDelete.forEach(File::delete);
-            } catch (IOException e) {
-                LOGGER.warn("IOException happened during deletion of xcrun-notarization-info temporary folder " + xcrunTempFolder, e);
-            }
-        }
-        NotarizationInfoResult result = resultBuilder.build();
-        LOGGER.trace("Notarization info retriever result:\n{}", result);
-        return result;
+        return cmd;
     }
 
-    private void analyseResults(NativeProcess.Result result,
-                                NotarizationInfoResult.Builder resultBuilder,
-                                String appleRequestUUID,
-                                OkHttpClient httpClient) throws ExecutionException {
-        try {
-            PListDict plist = PListDict.fromXML(result.stdoutAsStream());
+    @Override
+    protected NotarizationInfoResult analyzeInfoResult(NativeProcess.Result nativeProcessResult,
+                                                       String appleRequestUUID,
+                                                       OkHttpClient httpClient) throws ExecutionException {
 
-            if (result.exitValue() == 0) {
+        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
+        try {
+            PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
+
+            if (nativeProcessResult.exitValue() == 0) {
                 Map<?, ?> notarizationInfoList = (Map<?, ?>) plist.get("notarization-info");
                 if (notarizationInfoList != null && !notarizationInfoList.isEmpty()) {
                     parseNotarizationInfo(plist, notarizationInfoList, resultBuilder, httpClient);
@@ -236,15 +172,15 @@ public class NotarytoolNotarizer implements NotarizationTool {
                                     .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
                                     .message("The software asset has already been uploaded. Notarization in progress");
                         default:
-                            resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+result.exitValue()+").");
+                            resultBuilder.message("Failed to notarize the requested file. Remote service error code = " + firstProductErrorCode.getAsInt() + " (xcrun altool exit value ="+nativeProcessResult.exitValue()+").");
                             break;
                     }
                 } else {
                     Optional<String> errorMessage = plist.messageFromFirstProductError();
                     if (errorMessage.isPresent()) {
-                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+result.exitValue()+"). Reason: " + errorMessage.get());
+                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+nativeProcessResult.exitValue()+"). Reason: " + errorMessage.get());
                     } else {
-                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+result.exitValue()+").");
+                        resultBuilder.message("Failed to notarize the requested file (xcrun altool exit value ="+nativeProcessResult.exitValue()+").");
                     }
                 }
             }
@@ -252,6 +188,7 @@ public class NotarytoolNotarizer implements NotarizationTool {
             LOGGER.error("Cannot parse notarization info for request '" + appleRequestUUID + "'", e);
             throw new ExecutionException("Failed to retrieve notarization info.", e);
         }
+        return resultBuilder.build();
     }
 
     private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo,

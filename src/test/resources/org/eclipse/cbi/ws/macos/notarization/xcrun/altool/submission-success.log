@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>notarization-upload</key>
+	<dict>
+		<key>RequestUUID</key>
+		<string>a518bb0a-fdaa-4f73-aa09-c7a9b699ac59</string>
+	</dict>
+	<key>os-version</key>
+	<string>10.16.0</string>
+	<key>success-message</key>
+	<string>No errors uploading 'Alfred_5.1.2_2145.dmg'.</string>
+	<key>tool-path</key>
+	<string>/Applications/Xcode.app/Contents/SharedFrameworks/ContentDeliveryServices.framework/Versions/A/Frameworks/AppStoreService.framework</string>
+	<key>tool-version</key>
+	<string>4.00.1181</string>
+</dict>
+</plist>
