@@ -63,7 +63,14 @@ public class NativeProcess {
 			Thread.currentThread().interrupt();
 		}
 
-		try (AutoValue_NativeProcess_Result result = new AutoValue_NativeProcess_Result(p.exitValue(), arg0, out, err)) {
+		Result.Builder builder =
+			Result.builder()
+				.exitValue(p.exitValue())
+				.arg0(arg0)
+				.stdout(out)
+				.stderr(err);
+
+		try (Result result = builder.build()) {
 			return result.log();
 		}
 	}
@@ -162,5 +169,19 @@ public class NativeProcess {
 			deleteIfExists(stdout());
 			deleteIfExists(stderr());
 		}
+
+		public static Result.Builder builder() {
+			return new AutoValue_NativeProcess_Result.Builder();
+		}
+
+		@AutoValue.Builder
+		public static abstract class Builder {
+			public abstract Result.Builder exitValue(int exitValue);
+			public abstract Result.Builder arg0(String arg0);
+			public abstract Result.Builder stdout(Path stdout);
+			public abstract Result.Builder stderr(Path stderr);
+			public abstract Result build();
+		}
+
 	}
 }
