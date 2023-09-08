@@ -36,7 +36,7 @@ public abstract class NotarizationTool {
                                   Path fileToNotarize,
                                   Duration uploadTimeout) throws ExecutionException, IOException {
 
-        List<String> cmd = getUploadCommand(appleIDUsername, appleIDTeamID, primaryBundleId, fileToNotarize);
+        List<String> cmd = getUploadCommand(appleIDUsername, appleIDPassword, appleIDTeamID, primaryBundleId, fileToNotarize);
 
         Path xcrunTempFolder =
                 Files.createTempDirectory(fileToNotarize.getParent(),
@@ -68,7 +68,11 @@ public abstract class NotarizationTool {
         }
     }
 
-    protected abstract List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize);
+    protected abstract List<String> getUploadCommand(String appleIDUsername,
+                                                     String appleIDPassword,
+                                                     String appleIDTeamID,
+                                                     String primaryBundleId,
+                                                     Path fileToNotarize);
 
     protected abstract NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult,
                                                                Path fileToNotarize) throws ExecutionException;
@@ -80,7 +84,7 @@ public abstract class NotarizationTool {
                                                Duration pollingTimeout,
                                                OkHttpClient httpClient) throws ExecutionException, IOException {
 
-        List<String> cmd = getInfoCommand(appleIDUsername, appleIDTeamID, appleRequestUUID);
+        List<String> cmd = getInfoCommand(appleIDUsername, appleIDPassword, appleIDTeamID, appleRequestUUID);
 
         Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-info-");
 
@@ -117,7 +121,7 @@ public abstract class NotarizationTool {
         }
     }
 
-    protected abstract List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID);
+    protected abstract List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID);
 
     protected abstract boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
                                                  NotarizationInfoResult.Builder resultBuilder,
@@ -130,7 +134,7 @@ public abstract class NotarizationTool {
                               String appleRequestUUID,
                               Duration pollingTimeout) throws ExecutionException, IOException {
 
-        List<String> cmd = getLogCommand(appleIDUsername, appleIDTeamID, appleRequestUUID);
+        List<String> cmd = getLogCommand(appleIDUsername, appleIDPassword, appleIDTeamID, appleRequestUUID);
 
         Path xcrunTempFolder = Files.createTempDirectory("-xcrun-notarization-log-");
 
@@ -163,5 +167,5 @@ public abstract class NotarizationTool {
 
     protected abstract boolean hasLogCommand();
 
-    protected abstract List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID);
+    protected abstract List<String> getLogCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID);
 }
