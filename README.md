@@ -10,10 +10,10 @@ This is a web service that runs on macOS and offers a REST API to notarize signe
 
 ### Requirements
 
-* Java 17+. We advise you use the [AdoptOpenJDK](https://adoptopenjdk.net) binaries via [homebrew](https://brew.sh)
+* Java 17+. We advise you use the [Temurin](https://adoptium.net/) binaries via [homebrew](https://brew.sh)
 
 ```bash
-    brew install openjdk@17 
+    brew install temurin17
 ```
 
 ### Build
