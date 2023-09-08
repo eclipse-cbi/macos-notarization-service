@@ -37,8 +37,12 @@ public class AltoolNotarizer extends NotarizationTool {
 
 
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
-        List<String> cmd = ImmutableList.<String>builder()
+    protected List<String> getUploadCommand(String appleIDUsername,
+                                            String appleIDPassword,
+                                            String appleIDTeamID,
+                                            String primaryBundleId,
+                                            Path fileToNotarize) {
+        return ImmutableList.<String>builder()
             .add("xcrun", "altool")
             .add("--notarize-app")
             .add("--output-format", "xml")
@@ -46,8 +50,6 @@ public class AltoolNotarizer extends NotarizationTool {
             .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
             .add("--primary-bundle-id", primaryBundleId)
             .add("--file", fileToNotarize.toString()).build();
-
-        return cmd;
     }
 
     protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult,
@@ -134,15 +136,16 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
-        List<String> cmd = ImmutableList.<String>builder().add("xcrun", "altool")
-            .add("--notarization-info", appleRequestUUID.toString())
+    protected List<String> getInfoCommand(String appleIDUsername,
+                                          String appleIDPassword,
+                                          String appleIDTeamID,
+                                          String appleRequestUUID) {
+        return ImmutableList.<String>builder().add("xcrun", "altool")
+            .add("--notarization-info", appleRequestUUID)
             .add("--output-format", "xml")
             .add("--username", appleIDUsername)
             .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
             .build();
-
-        return cmd;
     }
 
     @Override
@@ -198,8 +201,7 @@ public class AltoolNotarizer extends NotarizationTool {
                                        NotarizationInfoResult.Builder resultBuilder,
                                        OkHttpClient httpClient) {
         Object status = notarizationInfo.get("Status");
-        if (status instanceof String) {
-            String statusStr = (String) status;
+        if (status instanceof String statusStr) {
             if ("success".equalsIgnoreCase(statusStr)) {
                 resultBuilder
                     .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
@@ -258,7 +260,10 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
-        return null;
+    protected List<String> getLogCommand(String appleIDUsername,
+                                         String appleIDPassword,
+                                         String appleIDTeamID,
+                                         String appleRequestUUID) {
+        throw new IllegalStateException("should not be called");
     }
 }

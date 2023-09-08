@@ -70,9 +70,8 @@ public class NativeProcess {
 				.stdout(out)
 				.stderr(err);
 
-		try (Result result = builder.build()) {
-			return result.log();
-		}
+		// do not use try-with-resources here, it will delete the capture output files.
+		return builder.build().log();
 	}
 
 	private static void destroy(Process p, String arg0, Path out, Path err) {

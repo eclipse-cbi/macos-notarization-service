@@ -21,18 +21,15 @@ public class NotarytoolNotarizer extends NotarizationTool {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotarytoolNotarizer.class);
 
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
-        List<String> cmd =
-            ImmutableList.<String>builder()
-                .add("xcrun", "notarytool")
-                .add("submit")
-                .add("--output-format", "plist")
-                .add("--apple-id", appleIDUsername)
-                .add("--team-id", appleIDTeamID)
-                .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
-                .add(fileToNotarize.toString()).build();
-
-        return cmd;
+    protected List<String> getUploadCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
+        return ImmutableList.<String>builder()
+            .add("xcrun", "notarytool")
+            .add("submit")
+            .add("--output-format", "plist")
+            .add("--apple-id", appleIDUsername)
+            .add("--password", appleIDPassword)
+            .add("--team-id", appleIDTeamID)
+            .add(fileToNotarize.toString()).build();
     }
 
     @Override
@@ -72,18 +69,15 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
-        List<String> cmd =
-            ImmutableList.<String>builder().add("xcrun", "notarytool")
-                .add("info")
-                .add("--output-format", "plist")
-                .add("--apple-id", appleIDUsername)
-                .add("--team-id", appleIDTeamID)
-                .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
-                .add(appleRequestUUID)
-                .build();
-
-        return cmd;
+    protected List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+        return ImmutableList.<String>builder().add("xcrun", "notarytool")
+            .add("info")
+            .add("--output-format", "plist")
+            .add("--apple-id", appleIDUsername)
+            .add("--password", appleIDPassword)
+            .add("--team-id", appleIDTeamID)
+            .add(appleRequestUUID)
+            .build();
     }
 
     @Override
@@ -142,16 +136,13 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getLogCommand(String appleIDUsername, String appleIDTeamID, String appleRequestUUID) {
-        List<String> cmd =
-                ImmutableList.<String>builder().add("xcrun", "notarytool")
-                        .add("log")
-                        .add("--apple-id", appleIDUsername)
-                        .add("--team-id", appleIDTeamID)
-                        .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
-                        .add(appleRequestUUID)
-                        .build();
-
-        return cmd;
+    protected List<String> getLogCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+        return ImmutableList.<String>builder().add("xcrun", "notarytool")
+                .add("log")
+                .add("--apple-id", appleIDUsername)
+                .add("--password", appleIDPassword)
+                .add("--team-id", appleIDTeamID)
+                .add(appleRequestUUID)
+                .build();
     }
 }
