@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
+package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
 import java.util.Collection;
 

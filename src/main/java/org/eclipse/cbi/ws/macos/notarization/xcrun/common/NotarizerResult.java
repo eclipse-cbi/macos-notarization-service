@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
+package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
 import javax.annotation.Nullable;
 
@@ -21,15 +21,15 @@ public abstract class NotarizerResult {
 	@Nullable
 	public abstract String appleRequestUUID();
 
-	static NotarizerResult.Builder builder() {
+	public static NotarizerResult.Builder builder() {
 		return new AutoValue_NotarizerResult.Builder();
 	}
 
 	@AutoValue.Builder
-	static abstract class Builder {
-		abstract NotarizerResult.Builder status(NotarizerResult.Status status);
-		abstract NotarizerResult.Builder message(String message);
-		abstract NotarizerResult.Builder appleRequestUUID(String requestUUID);
-		abstract NotarizerResult build();
+	public static abstract class Builder {
+		public abstract NotarizerResult.Builder status(NotarizerResult.Status status);
+		public abstract NotarizerResult.Builder message(String message);
+		public abstract NotarizerResult.Builder appleRequestUUID(String requestUUID);
+		public abstract NotarizerResult build();
 	}
 }

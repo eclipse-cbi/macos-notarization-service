@@ -30,47 +30,47 @@ import org.slf4j.LoggerFactory;
 @ApplicationScoped
 public class NotarizationCache {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NotarizationCache.class);
 
-  private final Cache<UUID, NotarizationRequest> cache;
-  
-  @Inject
-  NotarizationCache(
-  @ConfigProperty(name="notarization.cache.expireAfterWrite", defaultValue = "P1D") String cacheExpireAfterWrite) {
-    cache = CacheBuilder.newBuilder()
-      .expireAfterWrite(Duration.parse(cacheExpireAfterWrite))
-      .recordStats()
-      .removalListener(RemovalListeners.asynchronous((RemovalNotification<UUID, NotarizationRequest> notification) -> {
-        final NotarizationRequest request = notification.getValue();
-        LOGGER.trace("Removing expired request {} from cache", request);
-        if (!request.request().isDone()) {
-          LOGGER.warn("The notarization background process was not done before removal from cache. It will be cancelled");
-          request.request().cancel(true);
-        }
-        try {
-          Files.deleteIfExists(request.fileToNotarize());
-        } catch (IOException e) {
-          LOGGER.warn(String.format("Unable to delete user uploaded file '%s' to notarize after cache eviction of\n%s", request.fileToNotarize(), request), e);
-        }
-      }, Executors.newSingleThreadExecutor()))
-      .build();
-  }
+    private final Cache<UUID, NotarizationRequest> cache;
 
-  UUID put(NotarizationRequest request) {
-    UUID uuid;
-    try {
-      // avoid (statistically impossible) potential collision
-      do  {
-        uuid = UUID.randomUUID();
-      } while (cache.get(uuid, () -> request) != request);
-    } catch(ExecutionException e) {
-      throw new RuntimeException(e);
+    @Inject
+    NotarizationCache(
+            @ConfigProperty(name = "notarization.cache.expireAfterWrite", defaultValue = "P1D") String cacheExpireAfterWrite) {
+        cache = CacheBuilder.newBuilder()
+                .expireAfterWrite(Duration.parse(cacheExpireAfterWrite))
+                .recordStats()
+                .removalListener(RemovalListeners.asynchronous((RemovalNotification<UUID, NotarizationRequest> notification) -> {
+                    final NotarizationRequest request = notification.getValue();
+                    LOGGER.trace("Removing expired request {} from cache", request);
+                    if (!request.request().isDone()) {
+                        LOGGER.warn("The notarization background process was not done before removal from cache. It will be cancelled");
+                        request.request().cancel(true);
+                    }
+                    try {
+                        Files.deleteIfExists(request.fileToNotarize());
+                    } catch (IOException e) {
+                        LOGGER.warn(String.format("Unable to delete user uploaded file '%s' to notarize after cache eviction of\n%s", request.fileToNotarize(), request), e);
+                    }
+                }, Executors.newSingleThreadExecutor()))
+                .build();
     }
-    LOGGER.trace("Added request {} to cache (uuid={})", request, uuid);
-    return uuid;
-  }
 
-  NotarizationRequest getIfPresent(UUID uuid) {
-    return cache.getIfPresent(uuid);
-  }
+    UUID put(NotarizationRequest request) {
+        UUID uuid;
+        try {
+            // avoid (statistically impossible) potential collision
+            do {
+                uuid = UUID.randomUUID();
+            } while (cache.get(uuid, () -> request) != request);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        LOGGER.trace("Added request {} to cache (uuid={})", request, uuid);
+        return uuid;
+    }
+
+    NotarizationRequest getIfPresent(UUID uuid) {
+        return cache.getIfPresent(uuid);
+    }
 }

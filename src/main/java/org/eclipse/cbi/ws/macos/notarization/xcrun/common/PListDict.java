@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
+package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-class PListDict extends ForwardingMap<String, Object> {
+public class PListDict extends ForwardingMap<String, Object> {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(PListDict.class);
 
@@ -42,8 +42,8 @@ class PListDict extends ForwardingMap<String, Object> {
 		private static final ImmutableSet<String> VALID_CF_SIMPLE_TYPE_XML = ImmutableSet.of("string", "real",
 				"integer", "date", "data");
 
-		private Deque<String> simpleElementStack = new ArrayDeque<>();
-		private Deque<Object> compositeStack = new ArrayDeque<>();
+		private final Deque<String> simpleElementStack = new ArrayDeque<>();
+		private final Deque<Object> compositeStack = new ArrayDeque<>();
 		private String lastSeenKeyName;
 		private PListDict ret;
 
@@ -113,7 +113,7 @@ class PListDict extends ForwardingMap<String, Object> {
 		this.delegate = delegate;
 	}
 
-	static PListDict fromXML(InputStream xml) throws SAXException, IOException {
+	public static PListDict fromXML(InputStream xml) throws SAXException, IOException {
 		SAXParserFactory factory = SAXParserFactory.newInstance();
 		try {
 			factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -153,7 +153,7 @@ class PListDict extends ForwardingMap<String, Object> {
 		return Optional.empty();
 	}
 	
-	OptionalInt firstProductErrorCode() {
+	public OptionalInt firstProductErrorCode() {
 		Optional<Map<?, ?>> firstProductError = firstProductErrors();
 		if (firstProductError.isPresent()) {
 			Object rawCode = firstProductError.get().get("code");
@@ -168,7 +168,7 @@ class PListDict extends ForwardingMap<String, Object> {
 		return OptionalInt.empty();
 	}
 	
-	Optional<String> messageFromFirstProductError() {
+	public Optional<String> messageFromFirstProductError() {
 		Optional<Map<?, ?>> firstError = firstProductErrors();
 		if (firstError.isPresent()) {
 			Object message = firstError.get().get("message");
@@ -181,11 +181,10 @@ class PListDict extends ForwardingMap<String, Object> {
 		return Optional.empty();
 	}
 
-	Optional<String> requestUUIDFromNotarizationUpload() {
-		Object rawNotariationUpload = get("notarization-upload");
-		if (rawNotariationUpload instanceof Map<?,?>) {
-			Map<?,?> notariationUpload = (Map<?, ?>) rawNotariationUpload;
-			Object requestUUID = notariationUpload.get("RequestUUID");
+	public Optional<String> requestUUIDFromNotarizationUpload() {
+		Object rawNotarizationUpload = get("notarization-upload");
+		if (rawNotarizationUpload instanceof Map<?, ?> notarizationUpload) {
+			Object requestUUID = notarizationUpload.get("RequestUUID");
 			if (requestUUID instanceof String) {
 				return Optional.of((String)requestUUID);
 			}

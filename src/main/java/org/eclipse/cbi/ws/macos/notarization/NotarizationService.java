@@ -36,11 +36,12 @@ import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequest;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequestOptions;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatusWithUUID;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.NotarizationInfo;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.Notarizer;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.NotarizerResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.Stapler;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.AltoolNotarizer;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfo;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Notarizer;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Stapler;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.slf4j.Logger;
@@ -167,42 +168,46 @@ public class NotarizationService {
 
 		Files.copy(file, fileToNotarize, StandardCopyOption.REPLACE_EXISTING);
 
-		NotarizationRequest.Builder requestBuilder = NotarizationRequest.builder().fileToNotarize(fileToNotarize)
-				.submittedFilename(formData.submittedFilename("file").orElse(null)).notarizationOptions(options);
+		NotarizationRequest.Builder requestBuilder =
+			NotarizationRequest.builder()
+		    	.fileToNotarize(fileToNotarize)
+			    .submittedFilename(formData.submittedFilename("file").orElse(null))
+			    .notarizationOptions(options);
 
-		requestBuilder.notarizer(() -> Notarizer.builder()
-				.primaryBundleId(options.primaryBundleId())
-				.appleIDUsername(appleIDUsername)
-				.appleIDPassword(appleIDPassword)
-				.fileToNotarize(fileToNotarize)
-				.uploadTimeout(uploadTimeout)
-				.build()
-				.uploadFailsafe(uploadMaxAttempts, uploadMinBackOffDelay, uploadMaxBackOffDelay));
+		requestBuilder.notarizer(() ->
+			Notarizer.builder()
+		    	.primaryBundleId(options.primaryBundleId())
+			 	.appleIDUsername(appleIDUsername)
+			    .appleIDPassword(appleIDPassword)
+			    .fileToNotarize(fileToNotarize)
+			    .uploadTimeout(uploadTimeout)
+			    .tool(new AltoolNotarizer())
+			    .build()
+			    .uploadFailsafe(uploadMaxAttempts, uploadMinBackOffDelay, uploadMaxBackOffDelay));
 
-		requestBuilder.notarizationInfo((NotarizerResult r) -> NotarizationInfo.builder()
+		requestBuilder.notarizationInfo((NotarizerResult r) ->
+			NotarizationInfo.builder()
 				.appleIDUsername(appleIDUsername)
 				.appleIDPassword(appleIDPassword)
 				.appleRequestUUID(r.appleRequestUUID())
 				.httpClient(httpClient)
 				.pollingTimeout(infoPollingTimeout)
 				.build()
-				.retrieveInfoFailsafe(infoPollingMaxTotalDuration, infoPollingDelayBetweenSuccessfulAttempts, infoPollingMaxFailedAttempts, infoPollingMinBackOffDelay,
-						infoPollingMaxBackOffDelay));
+				.retrieveInfoFailsafe(infoPollingMaxTotalDuration, infoPollingDelayBetweenSuccessfulAttempts,
+									  infoPollingMaxFailedAttempts, infoPollingMinBackOffDelay, infoPollingMaxBackOffDelay));
 
 		if (options.staple()) {
-			requestBuilder.staplerResult((NotarizationInfoResult r) -> Stapler.builder()
-					.fileToStaple(fileToNotarize)
-					.staplingTimeout(staplingTimeout)
-					.build()
-					.stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay));
+			requestBuilder.staplerResult((NotarizationInfoResult r) ->
+				Stapler.builder()
+			    	.fileToStaple(fileToNotarize)
+				    .staplingTimeout(staplingTimeout)
+				    .build()
+				    .stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay));
 		}
 
 		NotarizationRequest request = requestBuilder.build(executor);
-
 		UUID uuid = cache.put(request);
-
-		NotarizationStatusWithUUID response = NotarizationStatusWithUUID.from(uuid, request.status().get());
-		return response;
+		return NotarizationStatusWithUUID.from(uuid, request.status().get());
 	}
 
 	@GET
@@ -213,7 +218,7 @@ public class NotarizationService {
 			UUID fromString = UUID.fromString(uuid);
 			NotarizationRequest request = cache.getIfPresent(fromString);
 			if (request == null) {
-				return Response.status(Response.Status.NOT_FOUND).entity("Unkown UUID").type(MediaType.TEXT_PLAIN).build();
+				return Response.status(Response.Status.NOT_FOUND).entity("Unknown UUID").type(MediaType.TEXT_PLAIN).build();
 			} else {
 				return toJsonResponse(NotarizationStatusWithUUID.from(fromString, request.status().get()));
 			}
@@ -229,7 +234,7 @@ public class NotarizationService {
 		UUID fromString = UUID.fromString(uuid);
 		NotarizationRequest request = cache.getIfPresent(fromString);
 		if (request == null) {
-			return Response.status(Response.Status.NOT_FOUND).entity("Unkown UUID").type(MediaType.TEXT_PLAIN).build();
+			return Response.status(Response.Status.NOT_FOUND).entity("Unknown UUID").type(MediaType.TEXT_PLAIN).build();
 		} else {
 			if (request.status().get().status() == NotarizationStatus.State.COMPLETE) {
 				ResponseBuilder response = Response.ok(Files.newInputStream(request.fileToNotarize()), MediaType.APPLICATION_OCTET_STREAM);
@@ -247,10 +252,9 @@ public class NotarizationService {
 		return Response.ok(moshi.adapter(NotarizationStatusWithUUID.class).toJson(response), MediaType.APPLICATION_JSON).build();
 	}
 
-	static Path createTempFile(Path parentFolder, String templateFilename) throws IOException {
-		return Files.createTempFile(parentFolder, com.google.common.io.Files.getNameWithoutExtension(templateFilename) + "-",
-				"." + com.google.common.io.Files.getFileExtension(templateFilename));
-
+	private static Path createTempFile(Path parentFolder, String templateFilename) throws IOException {
+		return Files.createTempFile(parentFolder,
+				                    com.google.common.io.Files.getNameWithoutExtension(templateFilename) + "-",
+				                    "." + com.google.common.io.Files.getFileExtension(templateFilename));
 	}
-
 }

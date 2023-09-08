@@ -21,9 +21,9 @@ import javax.annotation.Nullable;
 import com.google.auto.value.AutoValue;
 
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus.State;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.NotarizerResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.StaplerResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.StaplerResult;
 
 @AutoValue
 public abstract class NotarizationRequest {
@@ -47,7 +47,7 @@ public abstract class NotarizationRequest {
 
 	public static Builder builder() {
 		return new AutoValue_NotarizationRequest.Builder()
-				.status(new AtomicReference<NotarizationStatus>(NotarizationStatus.builder().status(State.IN_PROGRESS).message("Uploading file to Apple notarization service").build()));
+				.status(new AtomicReference<>(NotarizationStatus.builder().status(State.IN_PROGRESS).message("Uploading file to Apple notarization service").build()));
 	}
 
 	@AutoValue.Builder

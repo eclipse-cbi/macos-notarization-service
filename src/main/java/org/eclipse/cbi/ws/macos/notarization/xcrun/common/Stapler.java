@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
+package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import net.jodah.failsafe.RetryPolicy;
 @AutoValue
 public abstract class Stapler {
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(Notarizer.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Stapler.class);
 	private static final String DOT_APP_GLOB_PATTERN = "glob:**.{app,plugin,framework}";
 	private static final String TMPDIR = "TMPDIR";
 
@@ -78,7 +78,7 @@ public abstract class Stapler {
 				return StaplerResult.from(results);
 			}
 		} catch (IOException e) {
-			LOGGER.error("Error while stapling notarization ticket to zip file " + zipFile, e.getMessage());
+			LOGGER.error("Error while stapling notarization ticket to zip file " + zipFile, e);
 			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded zip file", e);
 		}
 	}
@@ -95,15 +95,17 @@ public abstract class Stapler {
 
 		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, staplingTimeout())) {
 			if (nativeProcessResult.exitValue() == 0) {
-				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.SUCCESS, "Notarization ticket has been stapled to the uploaded file successfully");
+				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.SUCCESS,
+						"Notarization ticket has been stapled to the uploaded file successfully");
 			} else {
-				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR, "Error happened while stapling notarization ticket to the uploaded file");
+				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR,
+						"Error happened while stapling notarization ticket to the uploaded file");
 			}
 		} catch (IOException e) {
-			LOGGER.error("Error while stapling notarization ticket to file " + file, e.getMessage());
+			LOGGER.error("Error while stapling notarization ticket to file " + file, e);
 			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded file", e);
 		} catch (TimeoutException e) {
-			LOGGER.error("Timeout while stapling notarization ticket to file " + file, e.getMessage());
+			LOGGER.error("Timeout while stapling notarization ticket to file " + file, e);
 			throw new ExecutionException("Timeout while stapling notarization ticket to the uploaded file", e);
 		} finally {
 			LOGGER.trace("Deleting xcrun-stapler temporary folder " + xcrunTempFolder);
@@ -114,16 +116,24 @@ public abstract class Stapler {
 			}
 		}
 	}
-	
+
 	public StaplerResult stapleFailsafe(int maxFailedAttempts, Duration minBackOffDelay, Duration maxBackOffDelay) {
 		RetryPolicy<StaplerResult> retryOnFailure = new RetryPolicy<StaplerResult>()
-				.handleResultIf(info -> info.status() == StaplerResult.Status.ERROR)
-				.withMaxAttempts(maxFailedAttempts)
-				.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
-				.onFailedAttempt(l -> LOGGER.trace("Retry stapling notarization ticket because of failure (attempt#"+l.getAttemptCount()+", elaspedTime="+l.getElapsedTime()+"), lastResult:\n"+l.getLastResult() + ", lastFailure:\n"+l.getLastFailure()));
-		
-		return Failsafe.with(retryOnFailure)
-				.onFailure(l -> LOGGER.error("Failure on notarization ticket stapling attempt #" + l.getAttemptCount() + ", cause: " + l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
+			.handleResultIf(info -> info.status() == StaplerResult.Status.ERROR)
+			.withMaxAttempts(maxFailedAttempts)
+			.withBackoff(minBackOffDelay.toNanos(), maxBackOffDelay.toNanos(), ChronoUnit.NANOS)
+			.onFailedAttempt(
+					l -> LOGGER.trace(
+							String.format("Retry stapling notarization ticket because of failure " +
+										  "(attempt#%d, elapsedTime=%s), lastResult:\n%s",
+									      l.getAttemptCount(), l.getElapsedTime(), l.getLastResult()),
+							l.getLastFailure()));
+
+		return
+			Failsafe.with(retryOnFailure)
+				.onFailure(l -> LOGGER.error(String.format("Failure on notarization ticket stapling attempt #%d, cause: %s, elapsed time: %s",
+								                           l.getAttemptCount(), l.getFailure().getMessage(), l.getElapsedTime()),
+											 l.getFailure()))
 				.get(this::staple);
 	}
 	
