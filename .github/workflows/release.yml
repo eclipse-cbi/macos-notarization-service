@@ -1,0 +1,107 @@
+name: Publish
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRO: 'temurin'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  precheck:
+    if: github.repository == 'eclipse-cbi/macos-notarization-service'
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.vars.outputs.VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRO }}
+          cache: maven
+
+      - name: Version
+        id: vars
+        shell: bash
+        run: |
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "PROJECT_VERSION=$(echo $PROJECT_VERSION)" >> $GITHUB_OUTPUT
+
+          echo "GitHub ref name: $GITHUB_REF_NAME"
+          echo "Project version: $PROJECT_VERSION"
+
+          # Check that the project version matches the GitHub ref name
+          test "v$PROJECT_VERSION" == "$GITHUB_REF_NAME"
+
+  build:
+    needs: ['precheck']
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.hash.outputs.hash }}
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRO }}
+          cache: maven
+      - run: ./mvnw -ntp -Pdist clean package
+      # Generate hashes used for provenance.
+      - name: generate hash
+        id: hash
+        run: cd target/distributions && echo "hash=$(sha256sum * | base64 -w0)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        with:
+          path: target/distributions
+
+  update_release_draft:
+    needs: ['precheck']
+    permissions:
+      contents: write
+      pull-requests: read
+    runs-on: ubuntu-latest
+    steps:
+      # Update the release notes for the released version
+      - uses: release-drafter/release-drafter@v5
+        with:
+          tag: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  provenance:
+    needs: ['build']
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    # Can't pin with hash due to how this workflow works.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
+    with:
+      base64-subjects: ${{ needs.build.outputs.hash }}
+
+  upload-artifacts:
+    # Upload the distribution and provenance to a GitHub release. They remain
+    # available as build artifacts for a while as well.
+    needs: ['provenance', 'update_release_draft']
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
+      - name: upload artifacts to release
+        run: >
+          gh release upload --repo ${{ github.repository }}
+          ${{ github.ref_name }}
+          *.intoto.jsonl/* artifact/*
+        env:
+          GH_TOKEN: ${{ github.token }}
