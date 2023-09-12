@@ -12,10 +12,14 @@
 		<maven.compiler.target>17</maven.compiler.target>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
 
+		<distribution.directory>${project.build.directory}/distributions</distribution.directory>
+
 		<quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
 		<quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
 		<quarkus.platform.version>3.3.2</quarkus.platform.version>
 		<quarkus-plugin.version>${quarkus.platform.version}</quarkus-plugin.version>
+		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
+		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
 		<surefire-plugin.version>3.1.2</surefire-plugin.version>
 		<compiler-plugin.version>3.11.0</compiler-plugin.version>
@@ -266,6 +270,37 @@
 										<native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
 									</systemProperties>
 								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>dist</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<version>3.3.0</version>
+						<configuration>
+							<attach>false</attach>
+							<appendAssemblyId>false</appendAssemblyId>
+							<finalName>${project.artifactId}-${project.version}</finalName>
+							<outputDirectory>${distribution.directory}</outputDirectory>
+							<workDirectory>${project.build.directory}/assembly/work</workDirectory>
+							<descriptors>
+								<descriptor>src/main/assembly/assembly.xml</descriptor>
+							</descriptors>
+						</configuration>
+						<executions>
+							<execution>
+								<id>make-distribution</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
 							</execution>
 						</executions>
 					</plugin>
