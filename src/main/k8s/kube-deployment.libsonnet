@@ -1,4 +1,4 @@
-local newDeployment(ips = []) = {
+local newDeployment(host, name, ips = []) = {
   route: {
     apiVersion: "route.openshift.io/v1",
     kind: "Route",
@@ -7,11 +7,11 @@ local newDeployment(ips = []) = {
         "haproxy.router.openshift.io/timeout": "600s",
         "haproxy.router.openshift.io/rewrite-target": "/macos-notarization-service"
       },
-      name: "macos-notarization",
+      name: name,
       namespace: "foundation-internal-infra-apps"
     },
     spec: {
-      host: "cbi.eclipse.org",
+      host: host,
       path: "/macos/xcrun",
       port: {
         targetPort: "http"
@@ -22,7 +22,7 @@ local newDeployment(ips = []) = {
       },
       to: {
         kind: "Service",
-        name: "macos-notarization",
+        name: name,
         weight: 100
       },
     }
@@ -31,7 +31,7 @@ local newDeployment(ips = []) = {
     apiVersion: "v1",
     kind: "Service",
     metadata: {
-      name: "macos-notarization",
+      name: name,
       namespace: "foundation-internal-infra-apps"
     },
     spec: {
@@ -50,7 +50,7 @@ local newDeployment(ips = []) = {
     apiVersion: "v1",
     kind: "Endpoints",
     metadata: {
-      name: "macos-notarization",
+      name: name,
       namespace: "foundation-internal-infra-apps"
     },
     subsets: [
