@@ -10,7 +10,7 @@ This is a web service that runs on macOS and offers a REST API to notarize signe
 
 ### Requirements
 
-* Java 17+. We advise you use the [Temurin](https://adoptium.net/) binaries via [homebrew](https://brew.sh)
+* Java 17+. We advise to use the [Temurin](https://adoptium.net/) binaries via [homebrew](https://brew.sh)
 
 ```bash
     brew install temurin17
@@ -20,21 +20,15 @@ This is a web service that runs on macOS and offers a REST API to notarize signe
 
     ./mvnw clean package
     
-It produces 2 jar files in `/target`:
+It produces the self-contained application in `/target/quarkus-app`.
 
-* `macos-notarization-service-1.0-SNAPSHOT.jar` - containing just the classes and resources of the projects, it’s the regular artifact produced by the Maven build;
-
-* `macos-notarization-service-1.0-SNAPSHOT-runner.jar` - being an executable jar. Be aware that it’s not an über-jar as the dependencies are copied into the target/lib directory.
-
-You can run the application using: `java -jar target/macos-notarization-service-1.0-SNAPSHOT-runner.jar`
-
-The Class-Path entry of the `MANIFEST.MF` from the runner jar explicitly lists the jars from the lib directory. So if you want to deploy your application somewhere, you need to copy the runner jar as well as the lib directory.
+You can run the application using: `java -jar target/quarkus-app/quarkus-run.jar`
 
 See below for advanced startup method.
 
 ### Run
 
-Configure `NOTARIZATION_APPLEID_USERNAME` and `NOTARIZATION_APPLEID_PASSWORD` with the proper values for your Apple developer ID account in file `start.sh`. Then, just run
+Configure `NOTARIZATION_APPLEID_USERNAME`, `NOTARIZATION_APPLEID_PASSWORD` and `NOTARIZATION_APPLEID_TEAMID` with the proper values for your Apple developer ID account in file `start.sh`. Then, just run
 
     ./start.sh
 
