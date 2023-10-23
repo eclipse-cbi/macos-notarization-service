@@ -14,8 +14,6 @@
 
 		<distribution.directory>${project.build.directory}/distributions</distribution.directory>
 
-		<quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-		<quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
 		<quarkus.platform.version>3.4.3</quarkus.platform.version>
 		<quarkus-plugin.version>${quarkus.platform.version}</quarkus-plugin.version>
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
@@ -51,8 +49,8 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>${quarkus.platform.group-id}</groupId>
-				<artifactId>${quarkus.platform.artifact-id}</artifactId>
+				<groupId>io.quarkus</groupId>
+				<artifactId>quarkus-bom</artifactId>
 				<version>${quarkus.platform.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
@@ -234,7 +232,7 @@
 						<configuration>
 							<rules>
 								<requireMavenVersion>
-									<version>3.8.4</version>
+									<version>3.9.4</version>
 								</requireMavenVersion>
 							</rules>
 						</configuration>
