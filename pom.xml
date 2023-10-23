@@ -41,10 +41,10 @@
 	</repositories>
 
 	<scm>
-    <connection>scm:git:https://github.com/eclipse-cbi/macos-notarization-service</connection>
-    <developerConnection>scm:git:ssh://github.com/eclipse-cbi/macos-notarization-service</developerConnection>
-    <url>https://github.com/eclipse-cbi/macos-notarization-service</url>
-  </scm>
+		<connection>scm:git:https://github.com/eclipse-cbi/macos-notarization-service</connection>
+		<developerConnection>scm:git:ssh://github.com/eclipse-cbi/macos-notarization-service</developerConnection>
+		<url>https://github.com/eclipse-cbi/macos-notarization-service</url>
+	</scm>
 
 	<dependencyManagement>
 		<dependencies>
@@ -102,7 +102,6 @@
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-resteasy</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-rest-client</artifactId>
@@ -111,12 +110,10 @@
 				<groupId>io.quarkus</groupId>
 				<artifactId>quarkus-resteasy-multipart</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-resteasy-jsonb</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>com.squareup.moshi</groupId>
 			<artifactId>moshi</artifactId>
@@ -240,30 +237,30 @@
 				</executions>
 			</plugin>
 			<plugin>
-        <groupId>org.cyclonedx</groupId>
-        <artifactId>cyclonedx-maven-plugin</artifactId>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
 				<version>2.7.9</version>
-        <executions>
-            <execution>
-                <phase>package</phase>
-                <goals>
-                    <goal>makeAggregateBom</goal>
-                </goals>
-            </execution>
-        </executions>
-    	</plugin>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>makeAggregateBom</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>8.4.0</version>
 				<executions>
-					 <execution>
-							<goals>
-								 <goal>check</goal>
-							</goals>
-					 </execution>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
 				</executions>
-		 	</plugin>
+			</plugin>
 		</plugins>
 	</build>
 	<profiles>
