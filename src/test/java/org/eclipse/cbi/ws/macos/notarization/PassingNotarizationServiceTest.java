@@ -7,17 +7,24 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization;
 
-import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.response.ExtractableResponse;
 import io.restassured.response.Response;
+import jakarta.inject.Inject;
+import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequestOptions;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatusWithUUID;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResultBuilder;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.get;
@@ -25,7 +32,10 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-public class NotarizationServiceTest {
+public class PassingNotarizationServiceTest {
+
+    @Inject
+    NotarizationService service;
 
     @BeforeAll
     public static void setup() {
@@ -34,55 +44,10 @@ public class NotarizationServiceTest {
     }
 
     @Test
-    public void testNotarizationFailure() throws InterruptedException {
-        // install a different notarization tool for this test, that fails all
+    public void notarizationSuccess() throws InterruptedException {
+        // use a different notarization tool for this test, that passes all
         // the time when notarizing a file.
-        QuarkusMock.installMockForType(new FailingTestProducer(), Producer.class);
-
-        NotarizationRequestOptions options =
-                NotarizationRequestOptions
-                        .builder()
-                        .primaryBundleId("1234")
-                        .staple(true)
-                        .build();
-
-        ExtractableResponse<Response> extract = given()
-                .when()
-                .multiPart("file", Paths.get("pom.xml").toFile())
-                .multiPart("options", options, "application/json")
-                .post("/macos-notarization-service/notarize")
-                .then()
-                .statusCode(200).extract();
-
-        NotarizationStatusWithUUID status = extract.body().as(NotarizationStatusWithUUID.class);
-        UUID uuid = status.uuid();
-        assertNotNull(uuid);
-        assertEquals(NotarizationStatus.State.IN_PROGRESS, status.notarizationStatus().status());
-
-        for (int attempt = 1; attempt < 10; attempt++) {
-            extract =
-                    get("/macos-notarization-service/%1$s/status".formatted(status.uuid()))
-                            .then()
-                            .statusCode(200)
-                            .extract();
-
-            status = extract.body().as(NotarizationStatusWithUUID.class);
-            System.out.println(status);
-            if (status.notarizationStatus().status() != NotarizationStatus.State.IN_PROGRESS) {
-                break;
-            }
-
-            Thread.sleep(1000);
-        }
-
-        assertEquals(NotarizationStatus.State.ERROR, status.notarizationStatus().status());
-    }
-
-    @Test
-    public void testNotarizationSuccess() throws InterruptedException {
-        // install a different notarization tool for this test, that fails all
-        // the time when notarizing a file.
-        QuarkusMock.installMockForType(new PassingTestProducer(), Producer.class);
+        service.notarizationTool = new PassingNotarizationTool();
 
         NotarizationRequestOptions options =
                 NotarizationRequestOptions
@@ -100,9 +65,12 @@ public class NotarizationServiceTest {
                 .statusCode(200).extract();
 
         NotarizationStatusWithUUID status = extract.body().as(NotarizationStatusWithUUID.class);
+        System.out.println(status);
         UUID uuid = status.uuid();
         assertNotNull(uuid);
         assertEquals(NotarizationStatus.State.IN_PROGRESS, status.notarizationStatus().status());
+
+        Thread.sleep(1000);
 
         extract =
             get("/macos-notarization-service/%1$s/status".formatted(status.uuid()))
@@ -113,5 +81,40 @@ public class NotarizationServiceTest {
         status = extract.body().as(NotarizationStatusWithUUID.class);
         System.out.println(status);
         assertEquals(NotarizationStatus.State.COMPLETE, status.notarizationStatus().status());
+    }
+
+    static class PassingNotarizationTool extends NotarizationTool {
+
+        @Override
+        protected List<String> getUploadCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
+            return List.of("pwd");
+        }
+
+        @Override
+        protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) {
+            System.out.println("Calling passing analyse");
+            return NotarizerResult.builder().status(NotarizerResult.Status.UPLOAD_SUCCESSFUL).build();
+        }
+
+        @Override
+        protected List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+            return List.of("pwd");
+        }
+
+        @Override
+        protected boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult, NotarizationInfoResultBuilder resultBuilder, String appleRequestUUID) {
+            resultBuilder.status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL);
+            return false;
+        }
+
+        @Override
+        protected boolean hasLogCommand() {
+            return false;
+        }
+
+        @Override
+        protected List<String> getLogCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+            return List.of("pwd");
+        }
     }
 }

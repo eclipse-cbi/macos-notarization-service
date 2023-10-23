@@ -19,8 +19,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.auto.value.AutoValue;
-
+import io.soabase.recordbuilder.core.RecordBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +62,7 @@ public class NativeProcess {
 			Thread.currentThread().interrupt();
 		}
 
-		Result.Builder builder =
+		NativeProcessResultBuilder builder =
 			Result.builder()
 				.exitValue(p.exitValue())
 				.arg0(arg0)
@@ -116,71 +115,54 @@ public class NativeProcess {
 		}
 	}
 
-	@AutoValue
-	public static abstract class Result implements AutoCloseable {
-		public abstract int exitValue();
-
-		public abstract String arg0();
-
-		abstract Path stdout();
+	@RecordBuilder
+	public record Result(int exitValue, String arg0, Path stdout, Path stderr) implements AutoCloseable {
 
 		public InputStream stdoutAsStream() throws IOException {
-			return Files.newInputStream(stdout(), StandardOpenOption.READ);
+			return Files.newInputStream(stdout, StandardOpenOption.READ);
 		}
-
-		abstract Path stderr();
 
 		Result log() {
 			LOGGER.trace(this.toString());
-			if (exitValue() == 0) {
-				LOGGER.trace("Process '" + arg0() + "' exited with value '" + exitValue() + "'");
+			if (exitValue == 0) {
+				LOGGER.trace("Process '" + arg0 + "' exited with value '" + exitValue + "'");
 				logstdio();
 			} else {
-				LOGGER.error("Process '" + arg0() + "' exited with value '" + exitValue() + "'");
+				LOGGER.error("Process '" + arg0 + "' exited with value '" + exitValue + "'");
 				logstdio();
 			}
 			return this;
 		}
 
 		private void logstdio() {
-			logstdio("stdout", stdout());
-			logstdio("stderr", stderr());
+			logstdio("stdout", stdout);
+			logstdio("stderr", stderr);
 		}
 
 		private void logstdio(String stdioname, Path stdio) {
 			try {
 				if (Files.size(stdio) > 0) {
 					if (exitValue() != 0) {
-						LOGGER.error("Process '" + arg0() + "' "+stdioname+":\n" + stdioContent(stdio));
+						LOGGER.error("Process '" + arg0 + "' "+stdioname+":\n" + stdioContent(stdio));
 					} else {						
-						LOGGER.debug("Process '" + arg0() + "' "+stdioname+":\n" + stdioContent(stdio));
+						LOGGER.debug("Process '" + arg0 + "' "+stdioname+":\n" + stdioContent(stdio));
 					}
 				} else {
-					LOGGER.debug("Process '" + arg0() + "' exited with no content on "+stdioname);
+					LOGGER.debug("Process '" + arg0 + "' exited with no content on "+stdioname);
 				}
 			} catch (IOException e) {
-				LOGGER.warn("Error while logging "+stdioname+" for '" + arg0() + "'");
+				LOGGER.warn("Error while logging "+stdioname+" for '" + arg0 + "'");
 			}
 		}
 
 		@Override
 		public void close() {
-			deleteIfExists(stdout());
-			deleteIfExists(stderr());
+			deleteIfExists(stdout);
+			deleteIfExists(stderr);
 		}
 
-		public static Result.Builder builder() {
-			return new AutoValue_NativeProcess_Result.Builder();
+		public static NativeProcessResultBuilder builder() {
+			return NativeProcessResultBuilder.builder();
 		}
-
-		@AutoValue.Builder
-		public static abstract class Builder {
-			public abstract Result.Builder exitValue(int exitValue);
-			public abstract Result.Builder arg0(String arg0);
-			public abstract Result.Builder stdout(Path stdout);
-			public abstract Result.Builder stderr(Path stderr);
-			public abstract Result build();
-		}
-
 	}
 }

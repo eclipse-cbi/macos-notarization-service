@@ -7,9 +7,12 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
 
+import okhttp3.OkHttpClient;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -18,6 +21,13 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AltoolNotarizerTest {
+
+    private AltoolNotarizer tool;
+
+    @BeforeEach
+    public void setup() {
+        tool = new AltoolNotarizer(new OkHttpClient.Builder().build());
+    }
 
     @Test
     public void analyzeSuccessfulSubmission() throws ExecutionException {
@@ -32,7 +42,7 @@ public class AltoolNotarizerTest {
                 .stderr(stderr)
                 .build();
 
-        NotarizerResult result = new AltoolNotarizer().analyzeSubmissionResult(r, Path.of("Alfred_5.1.2_2145.dmg"));
+        NotarizerResult result = tool.analyzeSubmissionResult(r, Path.of("Alfred_5.1.2_2145.dmg"));
 
         assertEquals(NotarizerResult.Status.UPLOAD_SUCCESSFUL, result.status());
         assertEquals("a518bb0a-fdaa-4f73-aa09-c7a9b699ac59", result.appleRequestUUID());
@@ -52,7 +62,7 @@ public class AltoolNotarizerTest {
                 .stderr(stderr)
                 .build();
 
-        NotarizerResult result = new AltoolNotarizer().analyzeSubmissionResult(r, Path.of("Alfred_5.1.2_2145.dmg"));
+        NotarizerResult result = tool.analyzeSubmissionResult(r, Path.of("Alfred_5.1.2_2145.dmg"));
 
         assertEquals(NotarizerResult.Status.UPLOAD_SUCCESSFUL, result.status());
         assertEquals("a518bb0a-fdaa-4f73-aa09-c7a9b699ac59", result.appleRequestUUID());
@@ -73,13 +83,12 @@ public class AltoolNotarizerTest {
                 .build();
 
         // Consider using a mock HttpClient for retrieving the log
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
-        new AltoolNotarizer().analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59", null);
+        NotarizationInfoResultBuilder resultBuilder = NotarizationInfoResult.builder();
+        new AltoolNotarizer(null).analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59");
         NotarizationInfoResult result = resultBuilder.build();
 
         assertEquals(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL, result.status());
         assertEquals("Notarization status: Package Approved", result.message());
         assertNull(result.notarizationLog());
     }
-
 }

@@ -7,26 +7,11 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.request;
 
-import com.google.auto.value.AutoValue;
-import com.squareup.moshi.JsonClass;
+import io.soabase.recordbuilder.core.RecordBuilder;
 
-@JsonClass(generateAdapter = true, generator = "avm")
-@AutoValue
-public abstract class NotarizationRequestOptions {
-	public abstract String primaryBundleId();
-
-	public abstract boolean staple();
-
-	static NotarizationRequestOptions.Builder builder() {
-		return new AutoValue_NotarizationRequestOptions.Builder().staple(false);
-	}
-
-	@AutoValue.Builder
-	abstract static class Builder {
-		abstract NotarizationRequestOptions.Builder primaryBundleId(String primaryBundleId);
-
-		abstract NotarizationRequestOptions.Builder staple(boolean staple);
-
-		abstract NotarizationRequestOptions build();
-	}
+@RecordBuilder
+public record NotarizationRequestOptions(String primaryBundleId, boolean staple) {
+    public static NotarizationRequestOptionsBuilder builder() {
+        return NotarizationRequestOptionsBuilder.builder();
+    }
 }

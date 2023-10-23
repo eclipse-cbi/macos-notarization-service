@@ -48,8 +48,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 		private PListDict ret;
 
 		@Override
-		public void startElement(String uri, String localName, String qName, Attributes attributes)
-				throws SAXException {
+		public void startElement(String uri, String localName, String qName, Attributes attributes) {
 			if ("dict".equals(qName)) {
 				compositeStack.push(addValueToParentComposite(new HashMap<String, Object>()));
 			} else if ("array".equals(qName)) {
@@ -62,7 +61,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 		}
 
 		@Override
-		public void characters(char[] ch, int start, int length) throws SAXException {
+		public void characters(char[] ch, int start, int length) {
 			String str = new String(ch, start, length);
 			String simpleElementPeek = simpleElementStack.peek();
 			if ("key".equals(simpleElementPeek)) {
@@ -85,7 +84,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public void endElement(String uri, String localName, String qName) throws SAXException {
+		public void endElement(String uri, String localName, String qName) {
 			if ("dict".equals(qName)) {
 				ret = new PListDict((Map<String, Object>) compositeStack.pop());
 			} else if ("array".equals(qName)) {
@@ -141,8 +140,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 
 	Optional<Map<?,?>> firstProductErrors() {
 		Object rawProductErrors = get("product-errors");
-		if (rawProductErrors instanceof List<?>) {
-			List<?> productErrors = (List<?>) rawProductErrors;
+		if (rawProductErrors instanceof List<?> productErrors) {
 			if (!productErrors.isEmpty()) {
 				Object rawFirstError = productErrors.get(0);
 				if (rawFirstError instanceof Map<?, ?>) {
@@ -177,7 +175,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 				return Optional.of((String) message);
 			}
 		}
-		LOGGER.debug("Unable to retrieve first 'message' from product-errors in " + toString());
+		LOGGER.debug("Unable to retrieve first 'message' from product-errors in " + this);
 		return Optional.empty();
 	}
 
@@ -189,7 +187,7 @@ public class PListDict extends ForwardingMap<String, Object> {
 				return Optional.of((String)requestUUID);
 			}
 		}
-		LOGGER.debug("Unable to retrieve 'RequestUUID' from notarization-upload in " + toString());
+		LOGGER.debug("Unable to retrieve 'RequestUUID' from notarization-upload in " + this);
 		return Optional.empty();
 	}
 

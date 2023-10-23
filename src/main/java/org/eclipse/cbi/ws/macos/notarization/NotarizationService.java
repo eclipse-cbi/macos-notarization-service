@@ -19,36 +19,21 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 
-import com.squareup.moshi.Moshi;
-
-import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequest;
-import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequestOptions;
-import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus;
-import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatusWithUUID;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.AltoolNotarizer;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfo;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Notarizer;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.Stapler;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool.NotarytoolNotarizer;
+import org.eclipse.cbi.ws.macos.notarization.request.*;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import okhttp3.OkHttpClient;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -61,10 +46,7 @@ public class NotarizationService {
 	NotarizationCache cache;
 
 	@Inject
-	Moshi moshi;
-
-	@Inject
-	OkHttpClient httpClient;
+	NotarizationTool notarizationTool;
 
 	@Inject
 	@Named("macos-notarization-service-pool")
@@ -147,49 +129,50 @@ public class NotarizationService {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response notarize(MultipartFormDataInput input) throws IOException {
-		try (MultipartFormDataInputWrapper.WithMoshi formData = new MultipartFormDataInputWrapper.WithMoshi(input, moshi)) {
-			Optional<NotarizationRequestOptions> optionsFromEquest = formData.partJsonBodyAs("options", NotarizationRequestOptions.class);
+		try (MultipartFormDataInputWrapper formData = new MultipartFormDataInputWrapper(input)) {
+			Optional<NotarizationRequestOptions> optionsFromRequest = formData.partBodyAs("options", new GenericType<>() {});
 			Optional<InputStream> fileFromRequest = formData.partBodyAs("file", InputStream.class);
 
-			if (optionsFromEquest.isPresent() && fileFromRequest.isPresent()) {
+			if (optionsFromRequest.isPresent() && fileFromRequest.isPresent()) {
 				InputStream file = fileFromRequest.get();
-				NotarizationRequestOptions options = optionsFromEquest.get();
+				NotarizationRequestOptions options = optionsFromRequest.get();
 				LOGGER.trace("notarization options:" + options);
 
 				NotarizationStatusWithUUID response = notarize(formData, file, options);
 				LOGGER.trace("notarization response:" + response);
-				return toJsonResponse(response);
+				return Response.ok(response, MediaType.APPLICATION_JSON).build();
 			} else {
-				return Response.status(Response.Status.BAD_REQUEST)
+				return
+					Response.status(Response.Status.BAD_REQUEST)
 						.entity("Request must be a multipart/form-data with a 'file' (application/octet-stream) and an 'options' (application/json) parts.")
-						.type(MediaType.TEXT_PLAIN).build();
+						.type(MediaType.TEXT_PLAIN)
+						.build();
 			}
 		}
 	}
 
-	private NotarizationStatusWithUUID notarize(MultipartFormDataInputWrapper.WithMoshi formData, InputStream file, NotarizationRequestOptions options)
+	private NotarizationStatusWithUUID notarize(MultipartFormDataInputWrapper formData, InputStream file, NotarizationRequestOptions options)
 			throws IOException {
 		Path fileToNotarize = createTempFile(Paths.get(pendingFilesPath), formData.submittedFilename("file").orElse("unknown"));
-
 		Files.copy(file, fileToNotarize, StandardCopyOption.REPLACE_EXISTING);
 
-		NotarizationRequest.Builder requestBuilder =
-			NotarizationRequest.builder()
-		    	.fileToNotarize(fileToNotarize)
-			    .submittedFilename(formData.submittedFilename("file").orElse(null))
-			    .notarizationOptions(options);
+		NotarizationRequestBuilder requestBuilder =
+			NotarizationRequest.builderWithDefaultStatus()
+				.fileToNotarize(fileToNotarize)
+				.submittedFilename(formData.submittedFilename("file").orElse(null))
+				.notarizationOptions(options);
 
 		requestBuilder.notarizer(() ->
 			Notarizer.builder()
-		    	.primaryBundleId(options.primaryBundleId())
-			 	.appleIDUsername(appleIDUsername)
-			    .appleIDPassword(appleIDPassword)
+				.primaryBundleId(options.primaryBundleId())
+				.appleIDUsername(appleIDUsername)
+				.appleIDPassword(appleIDPassword)
 				.appleIDTeamID(appleIDTeamID)
-			    .fileToNotarize(fileToNotarize)
-			    .uploadTimeout(uploadTimeout)
-			    .tool(new NotarytoolNotarizer())
-			    .build()
-			    .uploadFailsafe(uploadMaxAttempts, uploadMinBackOffDelay, uploadMaxBackOffDelay));
+				.fileToNotarize(fileToNotarize)
+				.uploadTimeout(uploadTimeout)
+				.tool(notarizationTool)
+				.build()
+				.uploadFailsafe(uploadMaxAttempts, uploadMinBackOffDelay, uploadMaxBackOffDelay));
 
 		requestBuilder.notarizationInfo((NotarizerResult r) ->
 			NotarizationInfo.builder()
@@ -197,23 +180,22 @@ public class NotarizationService {
 				.appleIDPassword(appleIDPassword)
 				.appleIDTeamID(appleIDTeamID)
 				.appleRequestUUID(r.appleRequestUUID())
-				.httpClient(httpClient)
 				.pollingTimeout(infoPollingTimeout)
-				.tool(new NotarytoolNotarizer())
+				.tool(notarizationTool)
 				.build()
 				.retrieveInfoFailsafe(infoPollingMaxTotalDuration, infoPollingDelayBetweenSuccessfulAttempts,
 									  infoPollingMaxFailedAttempts, infoPollingMinBackOffDelay, infoPollingMaxBackOffDelay));
 
 		if (options.staple()) {
-			requestBuilder.staplerResult((NotarizationInfoResult r) ->
-				Stapler.builder()
-			    	.fileToStaple(fileToNotarize)
-				    .staplingTimeout(staplingTimeout)
-				    .build()
-				    .stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay));
+			requestBuilder.staplerResult(Optional.of((NotarizationInfoResult r) ->
+					Stapler.builder()
+						.fileToStaple(fileToNotarize)
+						.staplingTimeout(staplingTimeout)
+						.build()
+						.stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay)));
 		}
 
-		NotarizationRequest request = requestBuilder.build(executor);
+		NotarizationRequest request = requestBuilder.build().execute(executor);
 		UUID uuid = cache.put(request);
 		return NotarizationStatusWithUUID.from(uuid, request.status().get());
 	}
@@ -228,7 +210,7 @@ public class NotarizationService {
 			if (request == null) {
 				return Response.status(Response.Status.NOT_FOUND).entity("Unknown UUID").type(MediaType.TEXT_PLAIN).build();
 			} else {
-				return toJsonResponse(NotarizationStatusWithUUID.from(fromString, request.status().get()));
+				return Response.ok(NotarizationStatusWithUUID.from(fromString, request.status().get())).build();
 			}
 		} catch (IllegalArgumentException e) {
 			return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
@@ -254,10 +236,6 @@ public class NotarizationService {
 				return Response.status(Response.Status.NOT_FOUND).entity("Notarization process did not complete yet.").type(MediaType.TEXT_PLAIN).build();
 			}
 		}
-	}
-
-	private Response toJsonResponse(NotarizationStatusWithUUID response) {
-		return Response.ok(moshi.adapter(NotarizationStatusWithUUID.class).toJson(response), MediaType.APPLICATION_JSON).build();
 	}
 
 	private static Path createTempFile(Path parentFolder, String templateFilename) throws IOException {

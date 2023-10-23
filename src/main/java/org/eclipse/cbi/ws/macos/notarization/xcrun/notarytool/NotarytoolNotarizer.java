@@ -1,12 +1,15 @@
+/*******************************************************************************
+ * Copyright (c) 2023 Eclipse Foundation and others.
+ * This program and the accompanying materials are made available
+ * under the terms of the Eclipse Public License 2.0
+ * which is available at http://www.eclipse.org/legal/epl-v20.html
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
 
 import com.google.common.collect.ImmutableList;
-import okhttp3.OkHttpClient;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.PListDict;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -34,7 +37,7 @@ public class NotarytoolNotarizer extends NotarizationTool {
 
     @Override
     protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) throws ExecutionException {
-        NotarizerResult.Builder resultBuilder = NotarizerResult.builder();
+        NotarizerResultBuilder resultBuilder = NotarizerResult.builder();
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
             if (nativeProcessResult.exitValue() == 0) {
@@ -82,9 +85,8 @@ public class NotarytoolNotarizer extends NotarizationTool {
 
     @Override
     protected boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                        NotarizationInfoResult.Builder resultBuilder,
-                                        String appleRequestUUID,
-                                        OkHttpClient httpClient) throws ExecutionException {
+                                        NotarizationInfoResultBuilder resultBuilder,
+                                        String appleRequestUUID) throws ExecutionException {
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
             if (nativeProcessResult.exitValue() == 0) {
@@ -102,10 +104,9 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     private boolean parseNotarizationInfo(PListDict plist,
-                                          NotarizationInfoResult.Builder resultBuilder) {
+                                          NotarizationInfoResultBuilder resultBuilder) {
         Object status = plist.get("status");
-        if (status instanceof String) {
-            String statusStr = (String) status;
+        if (status instanceof String statusStr) {
             if ("accepted".equalsIgnoreCase(statusStr)) {
                 resultBuilder
                     .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)

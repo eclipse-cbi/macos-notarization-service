@@ -7,20 +7,17 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.request;
 
+import io.soabase.recordbuilder.core.RecordBuilder;
+
 import java.util.UUID;
 
-import com.google.auto.value.AutoValue;
-import com.squareup.moshi.JsonClass;
+@RecordBuilder
+public record NotarizationStatusWithUUID(UUID uuid, NotarizationStatus notarizationStatus) {
+	public static NotarizationStatusWithUUIDBuilder builder() {
+		return NotarizationStatusWithUUIDBuilder.builder();
+	}
 
-@JsonClass(generateAdapter = true, generator = "avm")
-@AutoValue
-public abstract class NotarizationStatusWithUUID {
-
-	public abstract UUID uuid();
-	
-	public abstract NotarizationStatus notarizationStatus();
-	
 	public static NotarizationStatusWithUUID from(UUID uuid, NotarizationStatus status) {
-		return new AutoValue_NotarizationStatusWithUUID(uuid, status);
+		return new NotarizationStatusWithUUID(uuid, status);
 	}
 }

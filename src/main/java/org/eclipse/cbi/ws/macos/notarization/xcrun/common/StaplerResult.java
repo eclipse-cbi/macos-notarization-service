@@ -12,6 +12,7 @@ import java.util.Collection;
 
 public interface StaplerResult {
 	enum Status {ERROR, SUCCESS}
+
 	StaplerResult.Status status();
 	String message();
 

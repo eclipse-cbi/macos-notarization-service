@@ -17,8 +17,8 @@ import java.util.stream.StreamSupport;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.squareup.moshi.Moshi;
 
+import jakarta.ws.rs.core.GenericType;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
@@ -92,25 +92,12 @@ class MultipartFormDataInputWrapper implements AutoCloseable {
 		return Optional.empty();
 	}
 
-	static class WithMoshi extends MultipartFormDataInputWrapper {
-		private final Moshi moshi;
-
-		WithMoshi(MultipartFormDataInput input, Moshi moshi) {
-			super(input);
-			this.moshi = moshi;
+	<T> Optional<T> partBodyAs(String partName, GenericType<T> genericType) throws IOException {
+		Optional<InputPart> part = partWithName(partName);
+		if (part.isPresent()) {
+			return Optional.of(part.get().getBody(genericType));
 		}
-
-		<T> Optional<T> partJsonBodyAs(String partName, Class<T> type) throws IOException {
-			if (moshi != null) {
-				Optional<BufferedSource> source = partBodyAsBufferedSource(partName);
-				if (source.isPresent()) {
-					try (BufferedSource actualSource = source.get()) {
-						return Optional.of(moshi.adapter(type).fromJson(actualSource));
-					}
-				}
-			}
-			return Optional.empty();
-		}
+		return Optional.empty();
 	}
 
 	@Override
