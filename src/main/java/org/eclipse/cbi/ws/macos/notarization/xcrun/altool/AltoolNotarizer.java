@@ -35,6 +35,11 @@ public class AltoolNotarizer extends NotarizationTool {
     private static final Pattern UPLOADID_PATTERN = Pattern.compile(".*The upload ID is ([A-Za-z0-9\\\\-]*).*");
     private static final Pattern ERROR_MESSAGE_PATTERN = Pattern.compile(".*\"(.*)\".*");
 
+    OkHttpClient httpClient;
+
+    public AltoolNotarizer(OkHttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     @Override
     protected List<String> getUploadCommand(String appleIDUsername,
@@ -55,7 +60,7 @@ public class AltoolNotarizer extends NotarizationTool {
     protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult,
                                                       Path fileToNotarize) throws ExecutionException {
 
-        NotarizerResult.Builder resultBuilder = NotarizerResult.builder();
+        NotarizerResultBuilder resultBuilder = NotarizerResult.builder();
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
             if (nativeProcessResult.exitValue() == 0) {
@@ -87,7 +92,7 @@ public class AltoolNotarizer extends NotarizationTool {
         return resultBuilder.build();
     }
 
-    private void analyzeErrorMessage(String errorMessage, NotarizerResult.Builder resultBuilder) {
+    private void analyzeErrorMessage(String errorMessage, NotarizerResultBuilder resultBuilder) {
         if (errorMessage.contains("ITMS-4302")) {
             // ERROR ITMS-4302: "The software asset has an invalid primary bundle identifier '{}'"
             errorITMS4302(errorMessage, resultBuilder);
@@ -101,7 +106,7 @@ public class AltoolNotarizer extends NotarizationTool {
         }
     }
 
-    private void errorITMS90732(String errorMessage, NotarizerResult.Builder resultBuilder) {
+    private void errorITMS90732(String errorMessage, NotarizerResultBuilder resultBuilder) {
         Optional<String> appleRequestID = parseAppleRequestID(errorMessage);
         if (appleRequestID.isPresent()) {
             resultBuilder
@@ -113,7 +118,7 @@ public class AltoolNotarizer extends NotarizationTool {
         }
     }
 
-    private void errorITMS4302(String errorMessage, NotarizerResult.Builder resultBuilder) {
+    private void errorITMS4302(String errorMessage, NotarizerResultBuilder resultBuilder) {
         resultBuilder.status(NotarizerResult.Status.UPLOAD_FAILED);
         Matcher matcher = ERROR_MESSAGE_PATTERN.matcher(errorMessage);
         if (matcher.matches()) {
@@ -150,16 +155,15 @@ public class AltoolNotarizer extends NotarizationTool {
 
     @Override
     protected boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                        NotarizationInfoResult.Builder resultBuilder,
-                                        String appleRequestUUID,
-                                        OkHttpClient httpClient) throws ExecutionException {
+                                        NotarizationInfoResultBuilder resultBuilder,
+                                        String appleRequestUUID) throws ExecutionException {
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
 
             if (nativeProcessResult.exitValue() == 0) {
                 Map<?, ?> notarizationInfoList = (Map<?, ?>) plist.get("notarization-info");
                 if (notarizationInfoList != null && !notarizationInfoList.isEmpty()) {
-                    parseNotarizationInfo(plist, notarizationInfoList, resultBuilder, httpClient);
+                    parseNotarizationInfo(plist, notarizationInfoList, resultBuilder);
                 } else {
                     LOGGER.error("Error while parsing notarization info plist file. Cannot find 'notarization-info' section");
                     resultBuilder.status(NotarizationInfoResult.Status.RETRIEVAL_FAILED)
@@ -198,15 +202,14 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     private void parseNotarizationInfo(PListDict plist, Map<?, ?> notarizationInfo,
-                                       NotarizationInfoResult.Builder resultBuilder,
-                                       OkHttpClient httpClient) {
+                                       NotarizationInfoResultBuilder resultBuilder) {
         Object status = notarizationInfo.get("Status");
         if (status instanceof String statusStr) {
             if ("success".equalsIgnoreCase(statusStr)) {
                 resultBuilder
                     .status(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL)
                     .message("Notarization status: " + notarizationInfo.get("Status Message"))
-                    .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                    .notarizationLog(extractLogFromServer(notarizationInfo));
             } else if ("in progress".equalsIgnoreCase(statusStr)) {
                 resultBuilder
                     .status(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS)
@@ -214,7 +217,7 @@ public class AltoolNotarizer extends NotarizationTool {
             } else {
                 resultBuilder
                     .status(NotarizationInfoResult.Status.NOTARIZATION_FAILED)
-                    .notarizationLog(extractLogFromServer(notarizationInfo, httpClient));
+                    .notarizationLog(extractLogFromServer(notarizationInfo));
 
                 Optional<String> errorMessage = plist.messageFromFirstProductError();
                 OptionalInt errorCode = plist.firstProductErrorCode();
@@ -225,7 +228,7 @@ public class AltoolNotarizer extends NotarizationTool {
         }
     }
 
-    private String extractLogFromServer(Map<?, ?> notarizationInfo, OkHttpClient httpClient) {
+    private String extractLogFromServer(Map<?, ?> notarizationInfo) {
         if (httpClient == null) {
             return null;
         }
@@ -234,7 +237,7 @@ public class AltoolNotarizer extends NotarizationTool {
         if (logFileUrlStr instanceof String) {
             HttpUrl logfileUrl = HttpUrl.parse((String)logFileUrlStr);
             if (logfileUrl != null) {
-                return logFromServer(logfileUrl, httpClient);
+                return logFromServer(logfileUrl);
             } else {
                 return "LogFileURL from plist file is invalid '"+logFileUrlStr+"'";
             }
@@ -243,7 +246,7 @@ public class AltoolNotarizer extends NotarizationTool {
         }
     }
 
-    private String logFromServer(HttpUrl logFileUrl, OkHttpClient httpClient) {
+    private String logFromServer(HttpUrl logFileUrl) {
         try {
             RetryPolicy<String> retryPolicy = new RetryPolicy<String>().withDelay(Duration.ofSeconds(10));
             return Failsafe.with(retryPolicy).get(() ->

@@ -21,9 +21,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 
+import io.soabase.recordbuilder.core.RecordBuilder;
 import org.eclipse.cbi.common.util.Zips;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.slf4j.Logger;
@@ -32,19 +32,15 @@ import org.slf4j.LoggerFactory;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 
-@AutoValue
-public abstract class Stapler {
+@RecordBuilder
+public record Stapler(Path fileToStaple, Duration staplingTimeout) {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(Stapler.class);
 	private static final String DOT_APP_GLOB_PATTERN = "glob:**.{app,plugin,framework}";
 	private static final String TMPDIR = "TMPDIR";
 
-	abstract Path fileToStaple();
-	
-	abstract Duration staplingTimeout();
-	
-	public static Builder builder() {
-		return new AutoValue_Stapler.Builder();
+	public static StaplerBuilder builder() {
+		return StaplerBuilder.builder();
 	}
 	
 	public StaplerResult staple() throws ExecutionException, IOException {
@@ -68,7 +64,7 @@ public abstract class Stapler {
 							return stapleFile(p);
 						} catch (ExecutionException | IOException e) {
 							LOGGER.error("Error while stapling a file from a zip", e);
-							return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR, e.getMessage());
+							return new SimpleStaplerResult(StaplerResult.Status.ERROR, e.getMessage());
 						}
 					})
 					.collect(Collectors.toList());
@@ -86,7 +82,8 @@ public abstract class Stapler {
 	private StaplerResult stapleFile(Path file) throws ExecutionException, IOException {
 		Path xcrunTempFolder = Files.createTempDirectory("-xcrun-stapler-");
 
-		List<String> cmd = ImmutableList.<String>builder().add("xcrun", "stapler")
+		List<String> cmd =
+			ImmutableList.<String>builder().add("xcrun", "stapler")
 				.add("staple", file.toString())
 				.build();
 		
@@ -95,10 +92,10 @@ public abstract class Stapler {
 
 		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, staplingTimeout())) {
 			if (nativeProcessResult.exitValue() == 0) {
-				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.SUCCESS,
+				return new SimpleStaplerResult(StaplerResult.Status.SUCCESS,
 						"Notarization ticket has been stapled to the uploaded file successfully");
 			} else {
-				return new AutoValue_SimpleStaplerResult(StaplerResult.Status.ERROR,
+				return new SimpleStaplerResult(StaplerResult.Status.ERROR,
 						"Error happened while stapling notarization ticket to the uploaded file");
 			}
 		} catch (IOException e) {
@@ -135,12 +132,5 @@ public abstract class Stapler {
 								                           l.getAttemptCount(), l.getFailure().getMessage(), l.getElapsedTime()),
 											 l.getFailure()))
 				.get(this::staple);
-	}
-	
-	@AutoValue.Builder
-	public static abstract class Builder {
-		public abstract Builder fileToStaple(Path fileToStaple);
-		public abstract Builder staplingTimeout(Duration staplingTimeout);
-		public abstract Stapler build();
 	}
 }

@@ -8,9 +8,10 @@
 package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
 
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.altool.AltoolNotarizer;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -20,6 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class NotarytoolNotarizerTest {
+
+    private NotarytoolNotarizer tool;
+
+    @BeforeEach
+    public void setup() {
+        tool = new NotarytoolNotarizer();
+    }
 
     @Test
     public void analyzeSuccessfulSubmission() throws ExecutionException {
@@ -34,7 +42,7 @@ public class NotarytoolNotarizerTest {
                 .stderr(stderr)
                 .build();
 
-        NotarizerResult result = new NotarytoolNotarizer().analyzeSubmissionResult(r, Path.of("Alfred_5.1.2_2145.dmg"));
+        NotarizerResult result = tool.analyzeSubmissionResult(r, Path.of("SuperDuper.dmg"));
 
         assertEquals(NotarizerResult.Status.UPLOAD_SUCCESSFUL, result.status());
         assertEquals("ac9a4320-49c8-453c-82a3-996d83bd20f5", result.appleRequestUUID());
@@ -54,8 +62,8 @@ public class NotarytoolNotarizerTest {
                 .stderr(stderr)
                 .build();
 
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
-        new NotarytoolNotarizer().analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59", null);
+        NotarizationInfoResultBuilder resultBuilder = NotarizationInfoResult.builder();
+        tool.analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59");
         NotarizationInfoResult result = resultBuilder.build();
 
         assertEquals(NotarizationInfoResult.Status.NOTARIZATION_IN_PROGRESS, result.status());
@@ -76,13 +84,12 @@ public class NotarytoolNotarizerTest {
                         .stderr(stderr)
                         .build();
 
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
-        new NotarytoolNotarizer().analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59", null);
+        NotarizationInfoResultBuilder resultBuilder = NotarizationInfoResult.builder();
+        tool.analyzeInfoResult(r, resultBuilder, "a518bb0a-fdaa-4f73-aa09-c7a9b699ac59");
         NotarizationInfoResult result = resultBuilder.build();
 
         assertEquals(NotarizationInfoResult.Status.NOTARIZATION_SUCCESSFUL, result.status());
         assertEquals("Notarization status: Successfully received submission info", result.message());
         assertNull(result.notarizationLog());
     }
-
 }

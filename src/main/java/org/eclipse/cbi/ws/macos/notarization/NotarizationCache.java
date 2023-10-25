@@ -37,7 +37,8 @@ public class NotarizationCache {
     @Inject
     NotarizationCache(
             @ConfigProperty(name = "notarization.cache.expireAfterWrite", defaultValue = "P1D") String cacheExpireAfterWrite) {
-        cache = CacheBuilder.newBuilder()
+        cache =
+            CacheBuilder.newBuilder()
                 .expireAfterWrite(Duration.parse(cacheExpireAfterWrite))
                 .recordStats()
                 .removalListener(RemovalListeners.asynchronous((RemovalNotification<UUID, NotarizationRequest> notification) -> {
@@ -50,7 +51,9 @@ public class NotarizationCache {
                     try {
                         Files.deleteIfExists(request.fileToNotarize());
                     } catch (IOException e) {
-                        LOGGER.warn(String.format("Unable to delete user uploaded file '%s' to notarize after cache eviction of\n%s", request.fileToNotarize(), request), e);
+                        LOGGER.warn(String.format("Unable to delete user uploaded file '%s' to notarize after cache eviction of\n%s",
+                                                  request.fileToNotarize(), request),
+                                    e);
                     }
                 }, Executors.newSingleThreadExecutor()))
                 .build();

@@ -7,9 +7,6 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -18,15 +15,12 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Named;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.squareup.moshi.JsonAdapter;
-import com.squareup.moshi.JsonReader;
-import com.squareup.moshi.JsonWriter;
-import com.squareup.moshi.Moshi;
 
+import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
+import org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool.NotarytoolNotarizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import okhttp3.OkHttpClient;
 
 @ApplicationScoped
 public class Producer {
@@ -41,24 +35,17 @@ public class Producer {
 				.build());
 	}
 
+	/**
+	 * Returns the actual notarization tool that will be used.
+	 * This is useful for mocking the used tool during tests.
+	 */
 	@Produces
-	Moshi produceMoshi() {
-		return new Moshi.Builder()
-				.add(UUID.class,
-					new JsonAdapter<UUID>() {
-						public UUID fromJson(JsonReader reader) throws IOException {
-							return UUID.fromString(reader.nextString());
-						}
+	@ApplicationScoped
+	public NotarizationTool produceNotarizationTool() {
+		// when altool shall be used
+		// OkHttpClient httpClient = new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
+		//return new AltoolNotarizer(httpClient);
 
-						public void toJson(JsonWriter writer, UUID value) throws IOException {
-							writer.value(value.toString());
-						}
-					})
-				.build();
-	}
-
-	@Produces
-	OkHttpClient produceOkHttpClient() {
-		return new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
+		return new NotarytoolNotarizer();
 	}
 }

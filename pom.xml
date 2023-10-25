@@ -19,11 +19,9 @@
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
+		<io.soabase.record-builder.version>37</io.soabase.record-builder.version>
 		<surefire-plugin.version>3.1.2</surefire-plugin.version>
 		<compiler-plugin.version>3.11.0</compiler-plugin.version>
-
-		<com.google.auto.value.auto-value.version>1.10.4</com.google.auto.value.auto-value.version>
-		<com.ryanharter.auto.value.auto-value-moshi.version>1.1.0</com.ryanharter.auto.value.auto-value-moshi.version>
 	</properties>
 
 	<repositories>
@@ -54,21 +52,6 @@
 				<version>${quarkus.platform.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>com.squareup.moshi</groupId>
-				<artifactId>moshi</artifactId>
-				<version>1.15.0</version>
-			</dependency>
-			<dependency>
-				<groupId>com.google.auto.value</groupId>
-				<artifactId>auto-value-annotations</artifactId>
-				<version>${com.google.auto.value.auto-value.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.ryanharter.auto.value</groupId>
-				<artifactId>auto-value-moshi-runtime</artifactId>
-				<version>${com.ryanharter.auto.value.auto-value-moshi.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.google.guava</groupId>
@@ -107,24 +90,17 @@
 			<artifactId>quarkus-rest-client</artifactId>
 		</dependency>
 		<dependency>
-				<groupId>io.quarkus</groupId>
-				<artifactId>quarkus-resteasy-multipart</artifactId>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-resteasy-multipart</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-resteasy-jsonb</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.squareup.moshi</groupId>
-			<artifactId>moshi</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.ryanharter.auto.value</groupId>
-			<artifactId>auto-value-moshi-runtime</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.google.auto.value</groupId>
-			<artifactId>auto-value-annotations</artifactId>
+			<groupId>io.soabase.record-builder</groupId>
+			<artifactId>record-builder-core</artifactId>
+			<version>${io.soabase.record-builder.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -152,6 +128,14 @@
 			<artifactId>rest-assured</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Needed for json serialization in test classes using rest-assured,
+		     jsonb-3.0 is not yet supported, see https://github.com/rest-assured/rest-assured/issues/1651 -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.13.1</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -163,9 +147,9 @@
 					<parameters>${maven.compiler.parameters}</parameters>
 					<annotationProcessorPaths>
 						<path>
-							<groupId>com.ryanharter.auto.value</groupId>
-							<artifactId>auto-value-moshi-extension</artifactId>
-							<version>${com.ryanharter.auto.value.auto-value-moshi.version}</version>
+							<groupId>io.soabase.record-builder</groupId>
+							<artifactId>record-builder-processor</artifactId>
+							<version>${io.soabase.record-builder.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>

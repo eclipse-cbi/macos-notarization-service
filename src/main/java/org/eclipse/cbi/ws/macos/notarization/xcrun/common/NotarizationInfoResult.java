@@ -7,27 +7,15 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
+import io.soabase.recordbuilder.core.RecordBuilder;
+
 import javax.annotation.Nullable;
 
-import com.google.auto.value.AutoValue;
-
-@AutoValue
-public abstract class NotarizationInfoResult {
+@RecordBuilder
+public record NotarizationInfoResult(Status status, String message, @Nullable String notarizationLog) {
 	public enum Status {NOTARIZATION_IN_PROGRESS, NOTARIZATION_FAILED, NOTARIZATION_SUCCESSFUL, RETRIEVAL_FAILED}
-	public abstract Status status();
-	public abstract String message();
-	@Nullable
-	public abstract String notarizationLog();
 
-	public static NotarizationInfoResult.Builder builder() {
-		return new AutoValue_NotarizationInfoResult.Builder();
-	}
-
-	@AutoValue.Builder
-	public static abstract class Builder {
-		public abstract NotarizationInfoResult.Builder status(Status status);
-		public abstract NotarizationInfoResult.Builder message(String message);
-		public abstract NotarizationInfoResult.Builder notarizationLog(String notarizationLog);
-		public abstract NotarizationInfoResult build();
+	public static NotarizationInfoResultBuilder builder() {
+		return NotarizationInfoResultBuilder.builder();
 	}
 }

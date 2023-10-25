@@ -7,11 +7,6 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
 
-import okhttp3.OkHttpClient;
-import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +17,11 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 
 public abstract class NotarizationTool {
     protected static final String APPLEID_PASSWORD_ENV_VAR_NAME = "APPLEID_PASSWORD";
@@ -81,8 +81,7 @@ public abstract class NotarizationTool {
                                                String appleIDPassword,
                                                String appleIDTeamID,
                                                String appleRequestUUID,
-                                               Duration pollingTimeout,
-                                               OkHttpClient httpClient) throws ExecutionException, IOException {
+                                               Duration pollingTimeout) throws ExecutionException, IOException {
 
         List<String> cmd = getInfoCommand(appleIDUsername, appleIDPassword, appleIDTeamID, appleRequestUUID);
 
@@ -92,9 +91,9 @@ public abstract class NotarizationTool {
         processBuilder.environment().put(APPLEID_PASSWORD_ENV_VAR_NAME, appleIDPassword);
         processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
 
-        NotarizationInfoResult.Builder resultBuilder = NotarizationInfoResult.builder();
+        NotarizationInfoResultBuilder resultBuilder = NotarizationInfoResult.builder();
         try (NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, pollingTimeout)) {
-            boolean addLog = analyzeInfoResult(nativeProcessResult, resultBuilder, appleRequestUUID, httpClient);
+            boolean addLog = analyzeInfoResult(nativeProcessResult, resultBuilder, appleRequestUUID);
             if (addLog && hasLogCommand()) {
                 resultBuilder.notarizationLog(retrieveLog(appleIDUsername,
                                                           appleIDPassword,
@@ -124,9 +123,8 @@ public abstract class NotarizationTool {
     protected abstract List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID);
 
     protected abstract boolean analyzeInfoResult(NativeProcess.Result nativeProcessResult,
-                                                 NotarizationInfoResult.Builder resultBuilder,
-                                                 String appleRequestUUID,
-                                                 OkHttpClient httpClient) throws ExecutionException;
+                                                 NotarizationInfoResultBuilder resultBuilder,
+                                                 String appleRequestUUID) throws ExecutionException;
 
     public String retrieveLog(String appleIDUsername,
                               String appleIDPassword,
