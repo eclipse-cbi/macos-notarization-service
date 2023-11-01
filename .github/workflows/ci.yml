@@ -24,4 +24,4 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRO }}
           cache: maven
-      - run: ./mvnw -ntp clean verify
+      - run: ./mvnw -ntp clean verify -Psbom
