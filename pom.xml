@@ -202,6 +202,23 @@
 				</configuration>
 			</plugin>
 			<plugin>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
+				<version>2.7.10</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>makeBom</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<outputFormat>json</outputFormat>
+					<outputName>${project.build.finalName}-cyclonedx</outputName>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
 				<version>3.4.1</version>
@@ -304,22 +321,9 @@
 			</build>
 		</profile>
 		<profile>
-			<id>sbom</id>
+			<id>dependency-check</id>
 			<build>
 				<plugins>
-					<plugin>
-						<groupId>org.cyclonedx</groupId>
-						<artifactId>cyclonedx-maven-plugin</artifactId>
-						<version>2.7.10</version>
-						<executions>
-							<execution>
-								<phase>package</phase>
-								<goals>
-									<goal>makeAggregateBom</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
 					<plugin>
 						<groupId>org.owasp</groupId>
 						<artifactId>dependency-check-maven</artifactId>
