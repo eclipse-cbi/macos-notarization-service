@@ -11,13 +11,14 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.response.ExtractableResponse;
 import io.restassured.response.Response;
 import jakarta.inject.Inject;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationCredentials;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationRequestOptions;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatusWithUUID;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResultBuilder;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationTool;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -90,7 +91,7 @@ public class FailingNotarizationServiceTest {
     static class FailingNotarizationTool extends NotarizationTool {
 
         @Override
-        protected List<String> getUploadCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
+        protected List<String> getUploadCommand(NotarizationCredentials credentials, String primaryBundleId, Path fileToNotarize) {
             return null;
         }
 
@@ -100,7 +101,7 @@ public class FailingNotarizationServiceTest {
         }
 
         @Override
-        protected List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+        protected List<String> getInfoCommand(NotarizationCredentials credentials, String appleRequestUUID) {
             return null;
         }
 
@@ -115,7 +116,7 @@ public class FailingNotarizationServiceTest {
         }
 
         @Override
-        protected List<String> getLogCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+        protected List<String> getLogCommand(NotarizationCredentials credentials, String appleRequestUUID) {
             return null;
         }
     }

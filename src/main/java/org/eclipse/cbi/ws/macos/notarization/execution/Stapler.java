@@ -5,27 +5,23 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
+package org.eclipse.cbi.ws.macos.notarization.execution;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.collect.ImmutableList;
-
 import io.soabase.recordbuilder.core.RecordBuilder;
 import org.eclipse.cbi.common.util.Zips;
-import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.SimpleStaplerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.StaplerResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,21 +29,20 @@ import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 
 @RecordBuilder
-public record Stapler(Path fileToStaple, Duration staplingTimeout) {
+public record Stapler(Path fileToStaple, Duration staplingTimeout, StaplerTool tool) {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(Stapler.class);
 	private static final String DOT_APP_GLOB_PATTERN = "glob:**.{app,plugin,framework}";
-	private static final String TMPDIR = "TMPDIR";
 
 	public static StaplerBuilder builder() {
 		return StaplerBuilder.builder();
 	}
 	
 	public StaplerResult staple() throws ExecutionException, IOException {
-		if ("zip".equals(com.google.common.io.Files.getFileExtension(fileToStaple().toString()))) {
-			return stapleZipFile(fileToStaple());
+		if ("zip".equals(com.google.common.io.Files.getFileExtension(fileToStaple.toString()))) {
+			return stapleZipFile(fileToStaple);
 		} else {
-			return stapleFile(fileToStaple());
+			return tool.stapleFile(fileToStaple, staplingTimeout);
 		}
 	}
 
@@ -61,7 +56,7 @@ public record Stapler(Path fileToStaple, Duration staplingTimeout) {
 					.filter(p -> Files.isDirectory(p) && dotAppPattern.matches(p))
 					.map(p -> {
 						try {
-							return stapleFile(p);
+							return tool.stapleFile(p, staplingTimeout);
 						} catch (ExecutionException | IOException e) {
 							LOGGER.error("Error while stapling a file from a zip", e);
 							return new SimpleStaplerResult(StaplerResult.Status.ERROR, e.getMessage());
@@ -76,41 +71,6 @@ public record Stapler(Path fileToStaple, Duration staplingTimeout) {
 		} catch (IOException e) {
 			LOGGER.error("Error while stapling notarization ticket to zip file " + zipFile, e);
 			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded zip file", e);
-		}
-	}
-
-	private StaplerResult stapleFile(Path file) throws ExecutionException, IOException {
-		Path xcrunTempFolder = Files.createTempDirectory("-xcrun-stapler-");
-
-		List<String> cmd =
-			ImmutableList.<String>builder().add("xcrun", "stapler")
-				.add("staple", file.toString())
-				.build();
-		
-		ProcessBuilder processBuilder = new ProcessBuilder().command(cmd);
-		processBuilder.environment().put(TMPDIR, xcrunTempFolder.toString());
-
-		try(NativeProcess.Result nativeProcessResult = NativeProcess.startAndWait(processBuilder, staplingTimeout())) {
-			if (nativeProcessResult.exitValue() == 0) {
-				return new SimpleStaplerResult(StaplerResult.Status.SUCCESS,
-						"Notarization ticket has been stapled to the uploaded file successfully");
-			} else {
-				return new SimpleStaplerResult(StaplerResult.Status.ERROR,
-						"Error happened while stapling notarization ticket to the uploaded file");
-			}
-		} catch (IOException e) {
-			LOGGER.error("Error while stapling notarization ticket to file " + file, e);
-			throw new ExecutionException("Error happened while stapling notarization ticket to the uploaded file", e);
-		} catch (TimeoutException e) {
-			LOGGER.error("Timeout while stapling notarization ticket to file " + file, e);
-			throw new ExecutionException("Timeout while stapling notarization ticket to the uploaded file", e);
-		} finally {
-			LOGGER.trace("Deleting xcrun-stapler temporary folder " + xcrunTempFolder);
-			try (Stream<File> filesToDelete = Files.walk(xcrunTempFolder).sorted(Comparator.reverseOrder()).map(Path::toFile)) {
-				filesToDelete.forEach(File::delete);
-			} catch (IOException e) {
-				LOGGER.warn("IOException happened during deletion of xcrun-stapler temporary folder " + xcrunTempFolder, e);
-			}
 		}
 	}
 

@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.altool;
+package org.eclipse.cbi.ws.macos.notarization.execution.macos;
 
 import com.google.common.collect.ImmutableList;
 import net.jodah.failsafe.Failsafe;
@@ -14,8 +14,12 @@ import net.jodah.failsafe.RetryPolicy;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import org.eclipse.cbi.ws.macos.notarization.execution.*;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResultBuilder;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -42,16 +46,21 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername,
-                                            String appleIDPassword,
-                                            String appleIDTeamID,
+    public boolean validate(NotarizationCredentials credentials) {
+        boolean valid = credentials.requireUsername();
+        valid |= credentials.requirePassword();
+        return valid;
+    }
+
+    @Override
+    protected List<String> getUploadCommand(NotarizationCredentials credentials,
                                             String primaryBundleId,
                                             Path fileToNotarize) {
         return ImmutableList.<String>builder()
             .add("xcrun", "altool")
             .add("--notarize-app")
             .add("--output-format", "xml")
-            .add("--username", appleIDUsername)
+            .add("--username", credentials.getUsername())
             .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
             .add("--primary-bundle-id", primaryBundleId)
             .add("--file", fileToNotarize.toString()).build();
@@ -141,14 +150,12 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername,
-                                          String appleIDPassword,
-                                          String appleIDTeamID,
+    protected List<String> getInfoCommand(NotarizationCredentials credentials,
                                           String appleRequestUUID) {
         return ImmutableList.<String>builder().add("xcrun", "altool")
             .add("--notarization-info", appleRequestUUID)
             .add("--output-format", "xml")
-            .add("--username", appleIDUsername)
+            .add("--username", credentials.getUsername())
             .add("--password", "@env:" + APPLEID_PASSWORD_ENV_VAR_NAME)
             .build();
     }
@@ -263,9 +270,7 @@ public class AltoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getLogCommand(String appleIDUsername,
-                                         String appleIDPassword,
-                                         String appleIDTeamID,
+    protected List<String> getLogCommand(NotarizationCredentials credentials,
                                          String appleRequestUUID) {
         throw new IllegalStateException("should not be called");
     }

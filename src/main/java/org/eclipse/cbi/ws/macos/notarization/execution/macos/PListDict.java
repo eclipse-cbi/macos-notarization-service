@@ -5,7 +5,7 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
+package org.eclipse.cbi.ws.macos.notarization.execution.macos;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class PListDict extends ForwardingMap<String, Object> {
+class PListDict extends ForwardingMap<String, Object> {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(PListDict.class);
 

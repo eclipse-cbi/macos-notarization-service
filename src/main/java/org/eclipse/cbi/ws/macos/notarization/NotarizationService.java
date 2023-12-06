@@ -19,7 +19,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.ws.rs.*;
@@ -28,8 +27,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 
+import org.eclipse.cbi.ws.macos.notarization.execution.*;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
 import org.eclipse.cbi.ws.macos.notarization.request.*;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.slf4j.Logger;
@@ -46,7 +47,13 @@ public class NotarizationService {
 	NotarizationCache cache;
 
 	@Inject
+	NotarizationCredentials notarizationCredentials;
+
+	@Inject
 	NotarizationTool notarizationTool;
+
+	@Inject
+	StaplerTool staplerTool;
 
 	@Inject
 	@Named("macos-notarization-service-pool")
@@ -55,18 +62,6 @@ public class NotarizationService {
 	@Inject
 	@ConfigProperty(name = "notarization.cache.uploadedFiles", defaultValue = "/tmp/macos-notarization-service/pending-files")
 	String pendingFilesPath;
-
-	@Inject
-	@ConfigProperty(name = "notarization.appleid.password")
-	String appleIDPassword;
-
-	@Inject
-	@ConfigProperty(name = "notarization.appleid.username")
-	String appleIDUsername;
-
-	@Inject
-	@ConfigProperty(name = "notarization.appleid.teamid")
-	String appleIDTeamID;
 
 	@Inject
 	@ConfigProperty(name = "notarization.upload.timeout", defaultValue = "PT60M")
@@ -165,9 +160,7 @@ public class NotarizationService {
 		requestBuilder.notarizer(() ->
 			Notarizer.builder()
 				.primaryBundleId(options.primaryBundleId())
-				.appleIDUsername(appleIDUsername)
-				.appleIDPassword(appleIDPassword)
-				.appleIDTeamID(appleIDTeamID)
+				.credentials(notarizationCredentials)
 				.fileToNotarize(fileToNotarize)
 				.uploadTimeout(uploadTimeout)
 				.tool(notarizationTool)
@@ -176,9 +169,7 @@ public class NotarizationService {
 
 		requestBuilder.notarizationInfo((NotarizerResult r) ->
 			NotarizationInfo.builder()
-				.appleIDUsername(appleIDUsername)
-				.appleIDPassword(appleIDPassword)
-				.appleIDTeamID(appleIDTeamID)
+				.credentials(notarizationCredentials)
 				.appleRequestUUID(r.appleRequestUUID())
 				.pollingTimeout(infoPollingTimeout)
 				.tool(notarizationTool)
@@ -191,6 +182,7 @@ public class NotarizationService {
 					Stapler.builder()
 						.fileToStaple(fileToNotarize)
 						.staplingTimeout(staplingTimeout)
+						.tool(staplerTool)
 						.build()
 						.stapleFailsafe(staplingMaxAttempts, staplingMinBackOffDelay, staplingMaxBackOffDelay)));
 		}

@@ -5,12 +5,12 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
+package org.eclipse.cbi.ws.macos.notarization.execution.macos;
 
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResultBuilder;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,7 @@ public class NotarytoolNotarizerTest {
 
     @Test
     public void analyzeSuccessfulSubmission() throws ExecutionException {
-        Path stdout = Path.of(this.getClass().getResource("submission-success.log").getPath());
+        Path stdout = Path.of(this.getClass().getResource("notarytool/submission-success.log").getPath());
         Path stderr = Path.of("non-existing");
 
         NativeProcess.Result r =
@@ -51,7 +51,7 @@ public class NotarytoolNotarizerTest {
 
     @Test
     public void analyzeInfoInProgress() throws ExecutionException {
-        Path stdout = Path.of(this.getClass().getResource("info-in-progress.log").getPath());
+        Path stdout = Path.of(this.getClass().getResource("notarytool/info-in-progress.log").getPath());
         Path stderr = Path.of("non-existing");
 
         NativeProcess.Result r =
@@ -73,7 +73,7 @@ public class NotarytoolNotarizerTest {
 
     @Test
     public void analyzeInfoSuccess() throws ExecutionException {
-        Path stdout = Path.of(this.getClass().getResource("info-success.log").getPath());
+        Path stdout = Path.of(this.getClass().getResource("notarytool/info-success.log").getPath());
         Path stderr = Path.of("non-existing");
 
         NativeProcess.Result r =

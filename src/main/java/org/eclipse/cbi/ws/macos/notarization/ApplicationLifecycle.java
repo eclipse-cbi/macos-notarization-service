@@ -15,10 +15,14 @@ import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
+import io.quarkus.runtime.Quarkus;
+import io.quarkus.runtime.configuration.ConfigurationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationCredentials;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationTool;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +39,15 @@ public class ApplicationLifecycle {
     @ConfigProperty(name = "notarization.cache.uploadedFiles", defaultValue = "/tmp/macos-notarization-service/pending-files")
     String pendingFiles;
 
+    @Inject
+    NotarizationTool notarizationTool;
+
+    @Inject
+    NotarizationCredentials notarizationCredentials;
+
     void onStart(@Observes StartupEvent ev) throws IOException {
+        validateNotarizationCredentials();
+
         Path pendingFilesPath = Paths.get(pendingFiles);
 
         if (!Files.isDirectory(pendingFilesPath)) {
@@ -47,6 +59,13 @@ public class ApplicationLifecycle {
                 filesToDelete.forEach(File::delete);
             }
             Files.createDirectories(pendingFilesPath);
+        }
+    }
+
+    private void validateNotarizationCredentials() {
+        if (!notarizationTool.validate(notarizationCredentials)) {
+            Quarkus.asyncExit(1);
+            Quarkus.waitForExit();
         }
     }
 

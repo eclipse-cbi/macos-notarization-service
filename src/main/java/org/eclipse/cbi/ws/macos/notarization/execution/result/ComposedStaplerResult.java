@@ -5,14 +5,14 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
+package org.eclipse.cbi.ws.macos.notarization.execution.result;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-class ComposedStaplerResult implements StaplerResult {
+public class ComposedStaplerResult implements StaplerResult {
     private final List<StaplerResult> results;
 
     ComposedStaplerResult(Collection<? extends StaplerResult> results) {
