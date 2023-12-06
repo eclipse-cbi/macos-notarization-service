@@ -1,0 +1,1 @@
+cc2458901b2e93e21f1a4cc19ecc19a71dc2867d4d5f3f974091dac9ee536b1c  apple-codesign-0.26.0.tar.gz
