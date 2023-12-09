@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-    if: github.repository == 'netomi/macos-notarization-service'
+    if: github.repository == 'eclipse-cbi/macos-notarization-service'
     outputs:
       release-version: ${{ steps.prepare-release.outputs.RELEASE_VERSION }}
     steps:
