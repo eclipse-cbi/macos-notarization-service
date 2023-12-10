@@ -7,8 +7,13 @@ on:
         required: true
       version-fragment:
         description: 'Version fragment to increase for next development cycle'
-        required: false
+        required: true
         default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 env:
   BOT_USER_NAME: eclipse-cbi-bot
