@@ -44,7 +44,7 @@ release:
           title: 'regex:(?i)^(?:deps|dependencies|bump|upgraded|upgrade|migrate|switch):?'
           order: 130
         - label: 'releasechore'
-          title: 'regex:(?i)^(?:Prepare for|Bump for next)'
+          title: 'regex:(?i)^(?:Prepare for|Bump for next|Releasing)'
           order: 200
         - label: 'bot'
           title: 'regex:GitHub Action'
@@ -77,10 +77,6 @@ release:
           order: 40
           labels:
             - 'dependencies'
-
-      replacers:
-        - search: '[a-zA-Z]+: '
-          replace: ''
 
       hide:
         categories:
