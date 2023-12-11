@@ -68,15 +68,15 @@ jobs:
 
           echo "PROJECT_VERSION=$(echo $PROJECT_VERSION)" >> $GITHUB_OUTPUT
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
-          
+
           echo "Project version: $PROJECT_VERSION"
           echo "Release version: $RELEASE_VERSION"
-          
+
           if git show-ref --tags --verify --quiet "refs/tags/v${RELEASE_VERSION}"; then
             echo "Release Tag 'v${RELEASE_VERSION}' already exists, aborting."
             exit 1
           fi
-  
+
           if [ "$PROJECT_VERSION" != "$RELEASE_VERSION" ]; then
             ./mvnw -B versions:set versions:commit -DnewVersion=$RELEASE_VERSION
             git commit -a -m "Releasing version $RELEASE_VERSION"
@@ -90,7 +90,7 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@java
+    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@dc546a47616e6d440b8be39f2e65d617b013b653 # v1.1.0-java
     with:
       project-version: ${{ needs.precheck.outputs.release-version }}
       branch: ${{ github.ref_name }}
