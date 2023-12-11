@@ -1,0 +1,29 @@
+name: 'Increase semantic version'
+description: 'Increases '
+inputs:
+  current-version:
+    description: 'The current semantic version string'
+    required: true
+  version-fragment:
+    description: 'The version fragment to increase'
+    required: false
+    default: 'minor'
+outputs:
+  next-version:
+    description: "The next semantic version string with the specific fragment being increased"
+    value: ${{ steps.increase-semver.outputs.next-version }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@b64ffcaf5b410884ad320a9cfac8866006a109aa # v4.8.0
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    - shell: bash
+      run: pip install -r $GITHUB_ACTION_PATH/requirements.txt
+    - id: increase-semver
+      shell: bash
+      run: |
+        NEXT_VERSION=$(cd $GITHUB_ACTION_PATH && python increase_semver.py ${{ inputs.current-version }} ${{ inputs.version-fragment }})
+        echo "Next Version: $NEXT_VERSION"
+        echo "next-version=${NEXT_VERSION}" >> $GITHUB_OUTPUT

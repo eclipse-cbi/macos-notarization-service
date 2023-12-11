@@ -1,30 +1,111 @@
 name: Release
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+      version-fragment:
+        description: 'Version fragment to increase for next development cycle'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 env:
   BOT_USER_NAME: eclipse-cbi-bot
   BOT_EMAIL: cbi-bot@eclipse.org
-  JAVA_VERSION: '17'
+  JAVA_VERSION: 17
   JAVA_DISTRO: 'temurin'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:  # added using https://github.com/step-security/secure-repo
-  contents: read
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    # don't run this workflow in forks
-    if: github.repository == 'eclipse-cbi/macos-notarization-service'
+  precheck:
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
+    if: github.repository == 'eclipse-cbi/macos-notarization-service'
     outputs:
-      tag: ${{ steps.retrieve-tag.outputs.tag }}
-      hash: ${{ steps.hash.outputs.hash }}
+      release-version: ${{ steps.prepare-release.outputs.RELEASE_VERSION }}
+    steps:
+      - name: Check ref
+        shell: bash
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Release shall only be made from 'main' branch, triggered branch '${{ github.ref_name }}', aborting."
+            exit 1
+          fi
+
+      - name: Setup Git User
+        run: |
+          git config --global user.name '${{ env.BOT_USER_NAME }}'
+          git config --global user.email '${{ env.BOT_EMAIL }}'
+
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@0ab4596768b603586c0de567f2430c30f5b0d2b0 # v3.13.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRO }}
+          cache: maven
+
+      - name: Prepare release
+        id: prepare-release
+        shell: bash
+        run: |
+          PROJECT_VERSION="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          RELEASE_VERSION="${{ github.event.inputs.version }}"
+
+          echo "PROJECT_VERSION=$(echo $PROJECT_VERSION)" >> $GITHUB_OUTPUT
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "Project version: $PROJECT_VERSION"
+          echo "Release version: $RELEASE_VERSION"
+          
+          if git show-ref --tags --verify --quiet "refs/tags/v${RELEASE_VERSION}"; then
+            echo "Release Tag 'v${RELEASE_VERSION}' already exists, aborting."
+            exit 1
+          fi
+  
+          if [ "$PROJECT_VERSION" != "$RELEASE_VERSION" ]; then
+            ./mvnw -B versions:set versions:commit -DnewVersion=$RELEASE_VERSION
+            git commit -a -m "Releasing version $RELEASE_VERSION"
+            git push origin ${{ github.ref }}
+          fi
+
+  release:
+    needs: ['precheck']
+    permissions:
+      contents: write
+      actions: read
+      packages: write
+      id-token: write
+    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@java
+    with:
+      project-version: ${{ needs.precheck.outputs.release-version }}
+      branch: ${{ github.ref_name }}
+      jreleaser-version: '1.9.0'
+      java-version: 17
+      java-distribution: 'temurin'
+      rekor-log-public: true
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  prepare-for-next-development-cycle:
+    runs-on: ubuntu-22.04
+    needs: ['precheck', 'release']
+    permissions:
+      contents: write
     steps:
       - name: Setup Git User
         run: |
@@ -42,70 +123,13 @@ jobs:
           distribution: ${{ env.JAVA_DISTRO }}
           cache: maven
 
-      - name: Build Release
-        run: |
-          ./mvnw -ntp -B -Prelease release:clean release:prepare -Dmaven.test.skip=true
-          ./mvnw -ntp -B -Pdist -Prelease -Psbom release:perform -Darguments="-Dmaven.deploy.skip=true" -Dgoals=package
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: retrieve-tag
-        run: |
-          echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
-
-      - if: cancelled() || failure()
-        run: ./mvnw -B -Prelease release:rollback
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-        # Generate hashes used for provenance.
-      - name: generate hash
-        id: hash
-        run: cd target/checkout/target/distributions && echo "hash=$(sha256sum * | base64 -w0)" >> $GITHUB_OUTPUT
-
-      - uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      - id: increase-semver
+        uses: ./.github/actions/increase-semver
         with:
-          path: target/checkout/target/distributions
-
-
-  update_release_draft:
-    needs: ['build']
-    permissions:
-      contents: write
-      pull-requests: read
-    runs-on: ubuntu-latest
-    steps:
-      # Update the release notes for the released version
-      - uses: release-drafter/release-drafter@09c613e259eb8d4e7c81c2cb00618eb5fc4575a7 # v5.25.0
-        with:
-          tag: ${{ needs.build.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  provenance:
-    needs: ['build']
-    permissions:
-      actions: read
-      id-token: write
-      contents: write
-    # Can't pin with hash due to how this workflow works.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
-    with:
-      base64-subjects: ${{ needs.build.outputs.hash }}
-
-  upload-artifacts:
-    # Upload the distribution and provenance to a GitHub release. They remain
-    # available as build artifacts for a while as well.
-    needs: ['build', 'provenance', 'update_release_draft']
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-      - name: upload artifacts to release
-        run: >
-          gh release upload --repo ${{ github.repository }}
-          ${{ needs.build.outputs.tag }}
-          *.intoto.jsonl/* artifact/*
-        env:
-          GH_TOKEN: ${{ github.token }}
+          current-version: ${{ needs.precheck.outputs.release-version }}
+          version-fragment: ${{ github.event.inputs.version-fragment }}
+      - name: Update next development version in POMs
+        run: |
+          ./mvnw -B versions:set versions:commit -DnewVersion=${{ steps.increase-semver.outputs.next-version }}-SNAPSHOT -DgenerateBackupPoms=false
+          git commit -a -m "Prepare for next development cycle"
+          git push origin ${{ github.ref }}
