@@ -1,0 +1,113 @@
+project:
+  name: macos-notarization-service
+  description: Notarization service Eclipse projects
+  authors:
+    - Eclipse Foundation and others
+  license: EPL-2.0
+  inceptionYear: 2019
+  links:
+    homepage: https://github.com/eclipse-cbi/macos-notarization-service
+  stereotype: WEB
+  vendor: Eclipse Foundation
+  java:
+    groupId: org.eclipse.cbi
+    version: 17
+    multiProject: false
+  tags:
+    - 'notarization'
+
+release:
+  github:
+    overwrite: true
+    issues:
+      enabled: false
+    changelog:
+      skipMergeCommits: true
+      formatted: ALWAYS
+      preset: conventional-commits
+      format: '- {{commitShortHash}} {{commitTitle}} ({{commitAuthor}})'
+      contributors:
+        format: '- {{contributorName}}{{#contributorUsernameAsLink}} ({{.}}){{/contributorUsernameAsLink}}'
+      extraProperties:
+        categorizeScopes: 'false'
+      labelers:
+        - label: 'feature'
+          title: 'regex:(?i)^(?:add|added):?'
+          order: 10
+        - label: 'fix'
+          title: 'regex:(?i)^(?:fix|bug)'
+          order: 100
+        - label: 'chore'
+          title: 'regex:(?i)^(?:remove|delete|update)'
+          order: 110
+        - label: 'dependencies'
+          title: 'regex:(?i)^(?:deps|dependencies|bump|upgraded|upgrade|migrate|switch):?'
+          order: 130
+        - label: 'releasechore'
+          title: 'regex:(?i)^(?:Prepare for|Bump for next)'
+          order: 200
+        - label: 'bot'
+          title: 'regex:GitHub Action'
+          order: 300
+      excludeLabels:
+        - 'releasechore'
+        - 'bot'
+      categories:
+        - title: '🚀 Features'
+          key: 'features'
+          order: 1
+          labels:
+            - 'feat'
+            - 'feature'
+            - 'enhancement'
+        - title: '🐛 Bug Fixes'
+          key: 'bugfixes'
+          order: 5
+          labels:
+            - 'fix'
+            - 'bugfix'
+            - 'bug'
+        - title: '🧰 Maintenance'
+          key: 'tasks'
+          order: 10
+          labels:
+            - 'chore'
+        - title: 📦 Dependency updates
+          key: 'dependencies'
+          order: 40
+          labels:
+            - 'dependencies'
+
+      replacers:
+        - search: '[a-zA-Z]+: '
+          replace: ''
+
+      hide:
+        categories:
+          - 'merge'
+        contributors:
+          - 'GitHub'
+          - 'bot'
+
+catalog:
+  slsa:
+    active: RELEASE
+
+hooks:
+  script:
+    before:
+      - run: './mvnw -ntp -B -Pdist -Prelease -Psbom clean verify package'
+        condition: '"{{ Env.CI }}" == true'
+        verbose: true
+        filter:
+          includes: ['assemble']
+
+distributions:
+  app:
+    type: JAVA_BINARY
+    artifacts:
+      - path: 'target/distributions/{{projectName}}-{{projectVersion}}.zip'
+
+files:
+  artifacts:
+    - path: 'target/{{projectName}}-{{projectVersion}}-cyclonedx.json'
