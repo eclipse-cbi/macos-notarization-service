@@ -31,7 +31,7 @@ See below for advanced startup method.
 ### Installation
 
 To download a release and perform verification whether the downloaded artifact has been produced by the project,
-you should use the `download-github-release.sh` script:
+you should use the `download-github-release.sh` script (supported since `v1.2.0`):
 
 ```bash
 $ ./download-github-release.sh -v 1.2.0

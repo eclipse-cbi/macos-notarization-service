@@ -105,7 +105,8 @@ ARTIFACT_URL="https://github.com/${REPO}/releases/download/v${VERSION}/${ARTIFAC
 download-artifact
 
 FOUND=false
-ATTESTATION_SUFFIXES=(".zip.intoto.jsonl" "-attestation.intoto.build.slsa")
+# the attestation filename has changed after using jreleaser
+ATTESTATION_SUFFIXES=("-attestation.intoto.build.slsa" ".zip.intoto.jsonl")
 for SUFFIX in "${ATTESTATION_SUFFIXES[@]}"
 do
   PROVENANCE_FILENAME="${ARTIFACT}-${VERSION}${SUFFIX}"
@@ -119,7 +120,7 @@ do
 done
 
 if [ "${FOUND}" = false ]; then
-  echo "Failed to find provenance, aborting"
+  echo "Failed to download provenance, aborting"
   exit 1
 fi
 
