@@ -90,7 +90,7 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@dc546a47616e6d440b8be39f2e65d617b013b653 # v1.1.0-java
+    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@v1.1.0-java
     with:
       project-version: ${{ needs.precheck.outputs.release-version }}
       branch: ${{ github.ref_name }}
