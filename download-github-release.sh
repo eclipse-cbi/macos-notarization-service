@@ -35,7 +35,15 @@ download-provenance() {
 verify() {
   echo "Verifying artifact '${ARTIFACT_FILENAME}' using provenance '${PROVENANCE_FILENAME}':"
   echo ""
-  slsa-verifier verify-artifact --provenance-path ${PROVENANCE_FILENAME} ${ARTIFACT_FILENAME} --source-uri "github.com/${REPO}" --source-tag "v${VERSION}"
+
+  # disable --source-tag for now as jreleaser uses the main branch as sourceURI for now:
+  # --source-tag "v${VERSION}"
+
+  slsa-verifier verify-artifact \
+     --provenance-path ${PROVENANCE_FILENAME} \
+     --source-uri "github.com/${REPO}" \
+     --builder-id "https://github.com/jreleaser/release-action/.github/workflows/builder_slsa3.yml" \
+     ${ARTIFACT_FILENAME}
 }
 
 usage() {
@@ -49,7 +57,8 @@ Options:
   -a ARTIFACT    the artifact to download, e.g. macos-notarization-service
   -e EXTENSION   the extension to use, default: .zip
   -r REPO        the GitHub repo to use for download, format: owner/repo-name, e.g. eclipse-cbi/macos-notarization-service
-  -v VERSION     the release version to download, e.g. 1.2.0
+  -v VERSION     the release version to download, e.g. 1.3.0
+  -f             force downloading artifact and provenance
   -h             show this help
 
 "
@@ -64,12 +73,12 @@ then
     exit 1
 fi
 
-
 ARTIFACT="macos-notarization-service"
 EXTENSION=".zip"
 REPO="eclipse-cbi/macos-notarization-service"
+FORCE=false
 
-while getopts ":a:e:r:v:" o; do
+while getopts ":a:e:r:v:f" o; do
     case "${o}" in
         a)
             ARTIFACT=${OPTARG}
@@ -82,6 +91,9 @@ while getopts ":a:e:r:v:" o; do
             ;;
         v)
             VERSION=${OPTARG}
+            ;;
+        f)
+            FORCE=true
             ;;
         *)
             usage
@@ -102,7 +114,11 @@ echo "ARTIFACT = ${ARTIFACT}"
 ARTIFACT_FILENAME="${ARTIFACT}-${VERSION}${EXTENSION}"
 ARTIFACT_URL="https://github.com/${REPO}/releases/download/v${VERSION}/${ARTIFACT_FILENAME}"
 
-download-artifact
+if [ -f "$ARTIFACT_FILENAME" ] && [ "$FORCE" == false ]; then
+    echo "Using local artifact '${ARTIFACT_FILENAME}'"
+else
+  download-artifact
+fi
 
 FOUND=false
 # the attestation filename has changed after using jreleaser
@@ -111,6 +127,12 @@ for SUFFIX in "${ATTESTATION_SUFFIXES[@]}"
 do
   PROVENANCE_FILENAME="${ARTIFACT}-${VERSION}${SUFFIX}"
   PROVENANCE_URL="https://github.com/${REPO}/releases/download/v${VERSION}/${PROVENANCE_FILENAME}"
+
+  if [ -f "${PROVENANCE_FILENAME}" ] && [ "$FORCE" == false ]; then
+    echo "Using local provenance '${PROVENANCE_FILENAME}'"
+    FOUND=true
+    break
+  fi
 
   if download-provenance; then
     echo "Downloaded provenance '${PROVENANCE_FILENAME}'"

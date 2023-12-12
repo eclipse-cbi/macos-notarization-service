@@ -34,23 +34,22 @@ To download a release and perform verification whether the downloaded artifact h
 you should use the `download-github-release.sh` script (supported since `v1.2.0`):
 
 ```bash
-$ ./download-github-release.sh -v 1.2.0
+$ ./download-github-release.sh -v 1.3.0
 ```
 
-This will download the `1.2.0` release together with the provenance and perform verification (requires that the [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) tool is installe):
+This will download the `1.3.0` release together with the provenance and perform verification (requires that the [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) tool is installe):
 
 ```bash
-$ ./download-github-release.sh -v 1.2.0
+$ ./download-github-release.sh -v 1.3.0
 REPO = eclipse-cbi/macos-notarization-service
-VERSION = 1.2.0
+VERSION = 1.3.0
 ARTIFACT = macos-notarization-service
-Downloaded artifact 'macos-notarization-service-1.2.0.zip'
-Downloaded provenance 'macos-notarization-service-1.2.0.zip.intoto.jsonl'
-Verifying artifact 'macos-notarization-service-1.2.0.zip' using provenance 'macos-notarization-service-1.2.0.zip.intoto.jsonl':
+Downloaded artifact 'macos-notarization-service-1.3.0.zip'
+Downloaded provenance 'macos-notarization-service-1.3.0-attestation.intoto.build.slsa'
+Verifying artifact 'macos-notarization-service-1.3.0.zip' using provenance 'macos-notarization-service-1.3.0-attestation.intoto.build.slsa':
 
-Verified signature against tlog entry index 38470756 at URL: https://rekor.sigstore.dev/api/v1/log/entries/24296fb24b8ad77afd34aec2bf00e490c71f748ac30e5ea98054baf21276e5dc43bbd1653789b273
-Verified build using builder "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.9.0" at commit 5ad9cfe7d0a03ad3d7f58c1561b42f175b1d6850
-Verifying artifact macos-notarization-service-1.2.0.zip: PASSED
+Verified build using builder "https://github.com/jreleaser/release-action/.github/workflows/builder_slsa3.yml@refs/tags/v1.1.0-java" at commit 5325c11c611568f5e043d934185183783f228c0a
+Verifying artifact macos-notarization-service-1.3.0.zip: PASSED
 
 PASSED: Verified SLSA provenance
 ```
