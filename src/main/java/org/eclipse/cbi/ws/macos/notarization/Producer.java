@@ -16,8 +16,10 @@ import jakarta.inject.Named;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationTool;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool.NotarytoolNotarizer;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationTool;
+import org.eclipse.cbi.ws.macos.notarization.execution.StaplerTool;
+import org.eclipse.cbi.ws.macos.notarization.execution.generic.RustNotarizer;
+import org.eclipse.cbi.ws.macos.notarization.execution.generic.RustStapler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +48,18 @@ public class Producer {
 		// OkHttpClient httpClient = new OkHttpClient.Builder().callTimeout(Duration.ofSeconds(30)).build();
 		//return new AltoolNotarizer(httpClient);
 
-		return new NotarytoolNotarizer();
+		// for notarytool:
+		//return new NotarytoolNotarizer();
+
+		return new RustNotarizer();
+	}
+
+	@Produces
+	@ApplicationScoped
+	public StaplerTool produceStaplerTool() {
+		// for running on macos:
+		//return new XcrunStapler();
+
+		return new RustStapler();
 	}
 }

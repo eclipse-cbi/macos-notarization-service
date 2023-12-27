@@ -20,9 +20,9 @@ import javax.annotation.Nullable;
 
 import io.soabase.recordbuilder.core.RecordBuilder;
 import org.eclipse.cbi.ws.macos.notarization.request.NotarizationStatus.State;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizationInfoResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.NotarizerResult;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.StaplerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.StaplerResult;
 
 @RecordBuilder
 public record NotarizationRequest(

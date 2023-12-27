@@ -5,13 +5,14 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
+package org.eclipse.cbi.ws.macos.notarization.execution;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
 import io.soabase.recordbuilder.core.RecordBuilder;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,9 +22,7 @@ import net.jodah.failsafe.RetryPolicy;
 @RecordBuilder
 public record Notarizer(
 		String primaryBundleId,
-		String appleIDUsername,
-		String appleIDPassword,
-		String appleIDTeamID,
+		NotarizationCredentials credentials,
 		Path fileToNotarize,
 		Duration uploadTimeout,
 		NotarizationTool tool) {
@@ -55,6 +54,6 @@ public record Notarizer(
 							String.format("Failure on notarization upload attempt #%d, cause: %s, elapsed time: %s",
 									      l.getAttemptCount(), l.getFailure().getMessage(), l.getElapsedTime()),
 							l.getFailure()))
-				.get(() -> tool().upload(appleIDUsername(), appleIDPassword(), appleIDTeamID(), primaryBundleId(), fileToNotarize(), uploadTimeout()));
+				.get(() -> tool().upload(credentials(), primaryBundleId(), fileToNotarize(), uploadTimeout()));
 	}
 }

@@ -5,11 +5,16 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
+package org.eclipse.cbi.ws.macos.notarization.execution.macos;
 
 import com.google.common.collect.ImmutableList;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationCredentials;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResultBuilder;
+import org.eclipse.cbi.ws.macos.notarization.execution.NotarizationTool;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResult;
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizerResultBuilder;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
-import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -24,14 +29,22 @@ public class NotarytoolNotarizer extends NotarizationTool {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotarytoolNotarizer.class);
 
     @Override
-    protected List<String> getUploadCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String primaryBundleId, Path fileToNotarize) {
+    public boolean validate(NotarizationCredentials credentials) {
+        boolean valid = credentials.requireUsername();
+        valid |= credentials.requirePassword();
+        valid |= credentials.requireTeamID();
+        return valid;
+    }
+
+    @Override
+    protected List<String> getUploadCommand(NotarizationCredentials credentials, String primaryBundleId, Path fileToNotarize) {
         return ImmutableList.<String>builder()
             .add("xcrun", "notarytool")
             .add("submit")
             .add("--output-format", "plist")
-            .add("--apple-id", appleIDUsername)
-            .add("--password", appleIDPassword)
-            .add("--team-id", appleIDTeamID)
+            .add("--apple-id", credentials.getUsername())
+            .add("--password", credentials.getPassword())
+            .add("--team-id", credentials.getTeamID())
             .add(fileToNotarize.toString()).build();
     }
 
@@ -72,13 +85,13 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getInfoCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+    protected List<String> getInfoCommand(NotarizationCredentials credentials, String appleRequestUUID) {
         return ImmutableList.<String>builder().add("xcrun", "notarytool")
             .add("info")
             .add("--output-format", "plist")
-            .add("--apple-id", appleIDUsername)
-            .add("--password", appleIDPassword)
-            .add("--team-id", appleIDTeamID)
+            .add("--apple-id", credentials.getUsername())
+            .add("--password", credentials.getPassword())
+            .add("--team-id", credentials.getTeamID())
             .add(appleRequestUUID)
             .build();
     }
@@ -137,12 +150,12 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected List<String> getLogCommand(String appleIDUsername, String appleIDPassword, String appleIDTeamID, String appleRequestUUID) {
+    protected List<String> getLogCommand(NotarizationCredentials credentials, String appleRequestUUID) {
         return ImmutableList.<String>builder().add("xcrun", "notarytool")
                 .add("log")
-                .add("--apple-id", appleIDUsername)
-                .add("--password", appleIDPassword)
-                .add("--team-id", appleIDTeamID)
+                .add("--apple-id", credentials.getUsername())
+                .add("--password", credentials.getPassword())
+                .add("--team-id", credentials.getTeamID())
                 .add(appleRequestUUID)
                 .build();
     }

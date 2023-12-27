@@ -122,6 +122,10 @@ public class NativeProcess {
 			return Files.newInputStream(stdout, StandardOpenOption.READ);
 		}
 
+		public InputStream stderrAsStream() throws IOException {
+			return Files.newInputStream(stderr, StandardOpenOption.READ);
+		}
+
 		Result log() {
 			LOGGER.trace(this.toString());
 			if (exitValue == 0) {

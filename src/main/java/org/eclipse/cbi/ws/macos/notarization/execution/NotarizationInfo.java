@@ -5,12 +5,13 @@
  * which is available at http://www.eclipse.org/legal/epl-v20.html
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.cbi.ws.macos.notarization.xcrun.common;
+package org.eclipse.cbi.ws.macos.notarization.execution;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ExecutionException;
 
+import org.eclipse.cbi.ws.macos.notarization.execution.result.NotarizationInfoResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,9 +22,7 @@ import io.soabase.recordbuilder.core.RecordBuilder;
 
 @RecordBuilder
 public record NotarizationInfo(
-		String appleIDUsername,
-		String appleIDPassword,
-		String appleIDTeamID,
+		NotarizationCredentials credentials,
 		String appleRequestUUID,
 		Duration pollingTimeout,
 		NotarizationTool tool) {
@@ -65,6 +64,6 @@ public record NotarizationInfo(
 				.onFailure(l ->
 					LOGGER.error("Fail to fetch notarization info retrieval attempt #" + l.getAttemptCount() + ", cause: " +
 							     l.getFailure().getMessage() + ", elapsed time: " + l.getElapsedTime(), l.getFailure()))
-				.get(() -> tool().retrieveInfo(appleIDUsername(), appleIDPassword(), appleIDTeamID(), appleRequestUUID(), pollingTimeout()));
+				.get(() -> tool().retrieveInfo(credentials(), appleRequestUUID(), pollingTimeout()));
 	}
 }

@@ -1,0 +1,23 @@
+version: '3.9'
+services:
+  application:
+    build:
+      context: .
+      dockerfile: ./src/main/docker/Dockerfile.jvm
+    ports:
+      - 8080:8080
+    environment:
+      - NOTARIZATION_APPLEAPI_KEYFILE=/var/run/secrets/apple-api.json
+    volumes:
+      - ./config/application/apple-api.json:/var/run/secrets/apple-api.json
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.001'
+          memory: 192M

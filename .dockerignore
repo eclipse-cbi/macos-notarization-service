@@ -1,4 +1,6 @@
 *
+!src/main/docker/hashes.txt
 !target/*-runner
 !target/*-runner.jar
 !target/lib/*
+!target/quarkus-app/*

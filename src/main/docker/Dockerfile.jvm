@@ -1,0 +1,34 @@
+#
+# Based on a base image defined in the EF dockerfile project under https://github.com/EclipseFdn/dockerfiles/blob/master/java-api-base/Dockerfile.
+#
+# This image centralizes the base image version as well as any security patches to reduce the need to update all APIs manually in case of vulnerabilities or minor updates.
+#
+FROM eclipsefdn/java-api-base:j17-openjdk
+
+# Install curl.
+RUN microdnf --setopt=tsflags=nodocs install -y gzip
+
+WORKDIR /deployments/bin
+
+# Download apple-codesign tool and verify its hash
+COPY src/main/docker/hashes.txt /deployments/bin/
+
+ENV APPLE_CODESIGN_VERSION "0.26.0"
+ENV APPLE_CODESIGN_ARCHIVE "apple-codesign-${APPLE_CODESIGN_VERSION}.tar.gz"
+
+RUN  curl -L -o ${APPLE_CODESIGN_ARCHIVE} "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F${APPLE_CODESIGN_VERSION}/apple-codesign-$APPLE_CODESIGN_VERSION-x86_64-unknown-linux-musl.tar.gz" \
+  && sha256sum -c hashes.txt \
+  && tar xzf ${APPLE_CODESIGN_ARCHIVE} --strip-components=1 \
+  && rm -f ${APPLE_CODESIGN_ARCHIVE} \
+  && chmod a+x rcodesign
+
+ENV PATH "${PATH}:/deployments/bin"
+
+# We make four distinct layers so if there are application changes the library layers can be re-used
+COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
+COPY --chown=185 target/quarkus-app/*.jar /deployments/
+COPY --chown=185 target/quarkus-app/app/ /deployments/app/
+COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
