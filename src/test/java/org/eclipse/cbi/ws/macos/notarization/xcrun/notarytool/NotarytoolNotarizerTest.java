@@ -17,8 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class NotarytoolNotarizerTest {
 
@@ -47,6 +46,26 @@ public class NotarytoolNotarizerTest {
         assertEquals(NotarizerResult.Status.UPLOAD_SUCCESSFUL, result.status());
         assertEquals("ac9a4320-49c8-453c-82a3-996d83bd20f5", result.appleRequestUUID());
         assertEquals("Successfully uploaded file", result.message());
+    }
+
+    @Test
+    public void analyzeFailureSubmissionDueToRequiredAgreement() throws ExecutionException {
+        Path stdout = Path.of(this.getClass().getResource("submission-empty.log").getPath());
+        Path stderr = Path.of(this.getClass().getResource("submission-failure.log").getPath());
+
+        NativeProcess.Result r =
+                NativeProcess.Result.builder()
+                        .exitValue(0)
+                        .arg0("")
+                        .stdout(stdout)
+                        .stderr(stderr)
+                        .build();
+
+        NotarizerResult result = tool.analyzeSubmissionResult(r, Path.of("SuperDuper.dmg"));
+
+        assertEquals(NotarizerResult.Status.UPLOAD_FAILED, result.status());
+        assertTrue(result.message().startsWith("Failed to notarize the requested file. Reason: Error: " +
+                "HTTP status code: 403. A required agreement is missing or has expired."));
     }
 
     @Test
