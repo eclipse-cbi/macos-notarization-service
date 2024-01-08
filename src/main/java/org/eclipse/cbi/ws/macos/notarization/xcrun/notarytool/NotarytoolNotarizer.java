@@ -7,7 +7,9 @@
  *******************************************************************************/
 package org.eclipse.cbi.ws.macos.notarization.xcrun.notarytool;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.CharStreams;
 import org.eclipse.cbi.ws.macos.notarization.process.NativeProcess;
 import org.eclipse.cbi.ws.macos.notarization.xcrun.common.*;
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -36,7 +39,7 @@ public class NotarytoolNotarizer extends NotarizationTool {
     }
 
     @Override
-    protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) throws ExecutionException {
+    protected NotarizerResult analyzeSubmissionResult(NativeProcess.Result nativeProcessResult, Path fileToNotarize) {
         NotarizerResultBuilder resultBuilder = NotarizerResult.builder();
         try {
             PListDict plist = PListDict.fromXML(nativeProcessResult.stdoutAsStream());
@@ -66,7 +69,19 @@ public class NotarytoolNotarizer extends NotarizationTool {
             }
         } catch (IOException | SAXException e) {
             LOGGER.error("Error while parsing the output after the upload of '" + fileToNotarize + "' to the Apple notarization service", e);
-            throw new ExecutionException("Error while parsing the output after the upload of the file to be notarized", e);
+
+            String errorMessage;
+
+            try {
+                errorMessage =
+                    CharStreams.toString(new InputStreamReader(nativeProcessResult.stderrAsStream(), Charsets.UTF_8));
+            } catch (IOException ex) {
+                errorMessage = "unknown error. See server log for more details.";
+            }
+
+            resultBuilder
+                .status(NotarizerResult.Status.UPLOAD_FAILED)
+                .message("Failed to notarize the requested file. Reason: " + errorMessage);
         }
         return resultBuilder.build();
     }
