@@ -26,6 +26,8 @@ jobs:
           cache: maven
       - name: Build and verify
         run: ./mvnw -ntp clean verify
+      - name: Copy SBOM file
+        run: cp target/*-cyclonedx.json target/my-bom.json
       - name: Nexus IQ Policy Evaluation
         uses: sonatype-nexus-community/iq-github-action@master
         with:
@@ -34,7 +36,9 @@ jobs:
           password: ${{ secrets.IQ_TOKEN }}
           applicationId: macos-notarization-service-main
           stage: Build
-          target: target/*-cyclonedx.json
+          target: target/my-bom.json
+      - name: Delete temporary SBOM File
+        run: rm -f target/my-bom.json
       - name: Upload artifacts
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
