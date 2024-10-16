@@ -29,7 +29,7 @@ jobs:
       - name: Copy SBOM file
         run: cp target/*-cyclonedx.json target/my-bom.json
       - name: Nexus IQ Policy Evaluation
-        uses: sonatype-nexus-community/iq-github-action@master
+        uses: sonatype-nexus-community/iq-github-action@8d2038fbbcb37dc613c28d160843dd0981a7fce8 # v2.1.0
         with:
           serverUrl: https://sonatype-lifecycle.eclipse.org
           username: bMingMXb
