@@ -1,14 +1,24 @@
-local newDeployment(host, name, ips = []) = {
+local newDeployment(host, name, namespace, ips = []) = {
+  name: name,
+  namespace: namespace,
+
+  local labels(name) = {
+    "org.eclipse.cbi.service/name": name,
+  },
+  local metaData(name) = {
+    name: name,
+    labels: labels(name),
+    namespace: namespace,
+  },
+
   route: {
     apiVersion: "route.openshift.io/v1",
     kind: "Route",
-    metadata: {
+    metadata: metaData(name) + {
       annotations: {
         "haproxy.router.openshift.io/timeout": "600s",
         "haproxy.router.openshift.io/rewrite-target": "/macos-notarization-service"
       },
-      name: name,
-      namespace: "foundation-internal-infra-apps"
     },
     spec: {
       host: host,
@@ -30,10 +40,7 @@ local newDeployment(host, name, ips = []) = {
   service: {
     apiVersion: "v1",
     kind: "Service",
-    metadata: {
-      name: name,
-      namespace: "foundation-internal-infra-apps"
-    },
+    metadata: metaData(name),
     spec: {
       type: "ClusterIP",
       ports: [
@@ -49,10 +56,7 @@ local newDeployment(host, name, ips = []) = {
   endpoints: {
     apiVersion: "v1",
     kind: "Endpoints",
-    metadata: {
-      name: name,
-      namespace: "foundation-internal-infra-apps"
-    },
+    metadata: metaData(name),
     subsets: [
       {
         addresses: [
