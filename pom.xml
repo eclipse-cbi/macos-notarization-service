@@ -19,7 +19,7 @@
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
-		<io.soabase.record-builder.version>41</io.soabase.record-builder.version>
+		<io.soabase.record-builder.version>43</io.soabase.record-builder.version>
 		<surefire-plugin.version>3.5.1</surefire-plugin.version>
 		<compiler-plugin.version>3.13.0</compiler-plugin.version>
 	</properties>
@@ -67,7 +67,7 @@
 			<dependency>
 				<groupId>com.squareup.okio</groupId>
 				<artifactId>okio</artifactId>
-				<version>3.9.0</version>
+				<version>3.9.1</version>
 			</dependency>
 			<dependency>
 				<groupId>net.jodah</groupId>
@@ -77,7 +77,7 @@
 			<dependency>
 				<groupId>org.eclipse.cbi</groupId>
 				<artifactId>cbi-common</artifactId>
-				<version>1.4.3</version>
+				<version>1.5.2</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -173,7 +173,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.3.0</version>
+				<version>3.4.2</version>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -204,7 +204,7 @@
 			<plugin>
 				<groupId>org.cyclonedx</groupId>
 				<artifactId>cyclonedx-maven-plugin</artifactId>
-				<version>2.8.0</version>
+				<version>2.9.0</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -221,7 +221,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
-				<version>3.4.1</version>
+				<version>3.5.0</version>
 				<executions>
 					<execution>
 						<id>enforce-maven</id>
@@ -280,7 +280,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-release-plugin</artifactId>
-						<version>3.0.1</version>
+						<version>3.1.1</version>
 						<configuration>
 							<projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
 							<tagNameFormat>v@{project.version}</tagNameFormat>
@@ -327,7 +327,7 @@
 					<plugin>
 						<groupId>org.owasp</groupId>
 						<artifactId>dependency-check-maven</artifactId>
-						<version>9.1.0</version>
+						<version>10.0.4</version>
 						<executions>
 							<execution>
 								<goals>
