@@ -19,7 +19,7 @@
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
-		<io.soabase.record-builder.version>41</io.soabase.record-builder.version>
+		<io.soabase.record-builder.version>43</io.soabase.record-builder.version>
 		<surefire-plugin.version>3.2.5</surefire-plugin.version>
 		<compiler-plugin.version>3.13.0</compiler-plugin.version>
 	</properties>
