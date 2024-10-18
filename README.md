@@ -1,5 +1,7 @@
 # macOS Notarization Service
 
+Dummy change
+
 [![Build Status](https://ci.eclipse.org/cbi/buildStatus/icon?job=macos-notarization-service%2Fmain)](https://ci.eclipse.org/cbi/job/macos-notarization-service/job/main/) 
 [![GitHub release](https://img.shields.io/github/release/eclipse-cbi/macos-notarization-service.svg?label=release)](https://github.com/eclipse-cbi/macos-notarization-service.svg/releases/latest)
 [![GitHub license](https://img.shields.io/github/license/eclipse-cbi/macos-notarization-service.svg)](https://github.com/eclipse-cbi/macos-notarization-service/blob/master/LICENSE)
