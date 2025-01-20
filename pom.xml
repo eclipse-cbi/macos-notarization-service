@@ -14,7 +14,7 @@
 
 		<distribution.directory>${project.build.directory}/distributions</distribution.directory>
 
-		<quarkus.platform.version>3.17.0</quarkus.platform.version>
+		<quarkus.platform.version>3.17.7</quarkus.platform.version>
 		<quarkus-plugin.version>${quarkus.platform.version}</quarkus-plugin.version>
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
