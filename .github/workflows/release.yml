@@ -90,7 +90,7 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@v1.1.0-java # ignore: pin
+    uses: jreleaser/release-action/.github/workflows/builder_slsa3.yml@2.4.2 # ignore: pin
     with:
       project-version: ${{ needs.precheck.outputs.release-version }}
       branch: ${{ github.ref_name }}
