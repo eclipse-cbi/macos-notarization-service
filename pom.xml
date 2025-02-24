@@ -21,7 +21,7 @@
 
 		<io.soabase.record-builder.version>44</io.soabase.record-builder.version>
 		<surefire-plugin.version>3.5.2</surefire-plugin.version>
-		<compiler-plugin.version>3.13.0</compiler-plugin.version>
+		<compiler-plugin.version>3.14.0</compiler-plugin.version>
 	</properties>
 
 	<repositories>
