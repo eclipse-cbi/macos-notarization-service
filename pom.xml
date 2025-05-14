@@ -14,14 +14,14 @@
 
 		<distribution.directory>${project.build.directory}/distributions</distribution.directory>
 
-		<quarkus.platform.version>3.17.0</quarkus.platform.version>
+		<quarkus.platform.version>3.21.1</quarkus.platform.version>
 		<quarkus-plugin.version>${quarkus.platform.version}</quarkus-plugin.version>
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
-		<io.soabase.record-builder.version>43</io.soabase.record-builder.version>
-		<surefire-plugin.version>3.5.2</surefire-plugin.version>
-		<compiler-plugin.version>3.13.0</compiler-plugin.version>
+		<io.soabase.record-builder.version>45</io.soabase.record-builder.version>
+		<surefire-plugin.version>3.5.3</surefire-plugin.version>
+		<compiler-plugin.version>3.14.0</compiler-plugin.version>
 	</properties>
 
 	<repositories>
@@ -57,7 +57,7 @@
 			<dependency>
 				<groupId>com.google.guava</groupId>
 				<artifactId>guava</artifactId>
-				<version>33.4.0-jre</version>
+				<version>33.4.8-jre</version>
 			</dependency>
 			<dependency>
 				<groupId>com.squareup.okhttp3</groupId>
@@ -67,7 +67,7 @@
 			<dependency>
 				<groupId>com.squareup.okio</groupId>
 				<artifactId>okio</artifactId>
-				<version>3.10.2</version>
+				<version>3.11.0</version>
 			</dependency>
 			<dependency>
 				<groupId>net.jodah</groupId>
@@ -78,6 +78,11 @@
 				<groupId>org.eclipse.cbi</groupId>
 				<artifactId>cbi-common</artifactId>
 				<version>1.5.2</version>
+			</dependency>
+			<dependency>
+					<groupId>com.github.spotbugs</groupId>
+					<artifactId>spotbugs-annotations</artifactId>
+					<version>4.9.3</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -134,8 +139,12 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.18.1</version>
+			<version>2.19.0</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-annotations</artifactId>
 		</dependency>
 	</dependencies>
 	<build>
@@ -178,7 +187,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-artifact-plugin</artifactId>
-				<version>3.5.3</version>
+				<version>3.6.0</version>
 				<executions>
 					<execution>
 						<goals>
@@ -204,7 +213,7 @@
 			<plugin>
 				<groupId>org.cyclonedx</groupId>
 				<artifactId>cyclonedx-maven-plugin</artifactId>
-				<version>2.9.0</version>
+				<version>2.9.1</version>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -327,7 +336,7 @@
 					<plugin>
 						<groupId>org.owasp</groupId>
 						<artifactId>dependency-check-maven</artifactId>
-						<version>11.1.0</version>
+						<version>12.1.1</version>
 						<executions>
 							<execution>
 								<goals>
