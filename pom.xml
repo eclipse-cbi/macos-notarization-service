@@ -14,14 +14,14 @@
 
 		<distribution.directory>${project.build.directory}/distributions</distribution.directory>
 
-		<quarkus.platform.version>3.19.1</quarkus.platform.version>
+		<quarkus.platform.version>3.21.1</quarkus.platform.version>
 		<quarkus-plugin.version>${quarkus.platform.version}</quarkus-plugin.version>
 		<quarkus.native.additional-build-args>--initialize-at-run-time=com.google.common.cache</quarkus.native.additional-build-args>
 		<quarkus.native.compression.level>5</quarkus.native.compression.level>
 
-		<io.soabase.record-builder.version>44</io.soabase.record-builder.version>
+		<io.soabase.record-builder.version>45</io.soabase.record-builder.version>
 		<surefire-plugin.version>3.5.2</surefire-plugin.version>
-		<compiler-plugin.version>3.13.0</compiler-plugin.version>
+		<compiler-plugin.version>3.14.0</compiler-plugin.version>
 	</properties>
 
 	<repositories>
@@ -67,7 +67,7 @@
 			<dependency>
 				<groupId>com.squareup.okio</groupId>
 				<artifactId>okio</artifactId>
-				<version>3.10.2</version>
+				<version>3.11.0</version>
 			</dependency>
 			<dependency>
 				<groupId>net.jodah</groupId>
@@ -327,7 +327,7 @@
 					<plugin>
 						<groupId>org.owasp</groupId>
 						<artifactId>dependency-check-maven</artifactId>
-						<version>12.1.0</version>
+						<version>12.1.1</version>
 						<executions>
 							<execution>
 								<goals>
